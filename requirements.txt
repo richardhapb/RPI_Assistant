@@ -1,10 +1,16 @@
 certifi==2024.8.30
+cffi==1.17.0
 charset-normalizer==3.3.2
 click==8.1.7
 gTTS==2.5.3
 idna==3.8
 PyAudio==0.2.14
+pycparser==2.22
 requests==2.32.3
 SpeechRecognition==3.10.4
+srt==3.5.3
+tqdm==4.66.5
 typing_extensions==4.12.2
 urllib3==2.2.2
+vosk==0.3.44
+websockets==13.0.1

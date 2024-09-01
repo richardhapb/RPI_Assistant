@@ -1,34 +1,45 @@
-import speech_recognition as sr
-
-recognizer = sr.Recognizer()
-
-# Ajustar el umbral de energía (se puede ajustar según el entorno)
-recognizer.energy_threshold = 4000  # Este valor puede requerir ajustes
+import os
+import sys
+import json
+import vosk
+import pyaudio
 
 kwrds = ['lo logré']
 
 
-def recognize(audio):
-    try:
-        text = recognizer.recognize_google(audio, language='es-ES')
-        print(f"Detected phrase: {text}")
-        return text.lower()
-    except sr.UnknownValueError:
-        print('Unknown words')
-    except sr.RequestError as e:
-        print(f'Error requesting to Google Speech Recognition: {e}')
+if not os.path.exists("model"):
+    print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
+    sys.exit(1)
+    
+model = vosk.Model("model")
+recognizer = vosk.KaldiRecognizer(model, 16000)
 
+def recognize(data):
+    if recognizer.AcceptWaveform(data):
+        result = json.loads(recognizer.Result())
+        return result
+    else:
+        return None
+    
+def main():
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
+    stream.start_stream()
+    print("Listening...")
+    while True:
+        data = stream.read(4000)
+        if not data:
+            break
+        try:
+            if recognize(data)['text'] in kwrds:
+                break
+        except TypeError:
+            pass
+    print("Done.")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
 
-while True:
-    with sr.Microphone() as source:
-        recognizer.adjust_for_ambient_noise(source, duration=1)
-        if recognizer.energy_threshold < 4000:
-            print('Listening...')
-            audio = recognizer.listen(source)
-            text_listened = recognize(audio)
-            if text_listened and text_listened in kwrds:
-                if text_listened == kwrds[0]:
-                    print(f'Phrase detected')
-        else:
-            print('Waiting...')
+if __name__ == "__main__":
 
+    main()
