@@ -3,6 +3,7 @@ import sys
 import json
 import vosk
 import pyaudio
+import lamp
 
 kwrds = ['lo logré']
 
@@ -22,6 +23,9 @@ def recognize(data):
         return None
     
 def main():
+    lamp.main_lamp()
+    return
+
     p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
     stream.start_stream()
