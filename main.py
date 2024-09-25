@@ -7,19 +7,26 @@ from openai import OpenAI
 from gtts import gTTS
 import time
 import config
+import icloud
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
-kwrds_greetings = ['hola']
+NAME_AI = "octavia"
+
+# Keywords
+
+kwrds_activation = [NAME_AI]
+kwrds_greetings = ["buen día", "hola " + NAME_AI, "hola"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
+kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat']
 kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 
-MAX_TOKENS = 100
+MAX_TOKENS = 200
 PLAYER = "cvlc --play-and-exit "
 
-DEV = False
-REQUEST = "tengo una duda"
+DEV = True
+REQUEST = "hola"
 RATE = 16000
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 
@@ -42,20 +49,6 @@ def recognize(data):
     else:
         return {}
 
-def obtain_response(prompt):
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=MAX_TOKENS,
-        temperature=0.7,
-    )
-
-    res = response.choices[0].message.content
-    return res
-
 def listen(max_listening_time=5):
     data = b""
     start_time = time.time()
@@ -67,59 +60,96 @@ def listen(max_listening_time=5):
         except Exception as e:
             print(f"Error al leer el audio: {e}")
             break
-    return data
+    result = recognize(data)
+    if result and 'text' in result:
+        res = result['text']
+    else:
+        res = "error"
+
+    return res
+
+def speak(text):
+    tts = gTTS(text, lang="es", tld="com.mx")
+    tts.save("response.mp3")
+    os.system(PLAYER + "response.mp3")
 
 def manage_request(request):
     response = ""
     if request in kwrds_greetings:
         response = greetings()
+    elif request in kwrds_chatgpt:
+        prompt = ""
+        speak("Si Richard, dime que necesitas")
+        while True:
+            prompt = listen(10)
+            print(listen)
+            exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
+            if prompt in exit:
+                speak("De nada Richard, avísame si necesitas algo más")
+                break
+            gpt = chatgpt(prompt)
+            print(gpt)
+            speak(gpt)
+
     elif request in kwrds_chatgpt_data:
         response = chatgpt_data()
     elif request in kwrds_lamp_on:
         response = lamp(True)
     elif request in kwrds_lamp_off:
         response = lamp(False)
-    elif request == "adiós":
+    elif request == "adiós " + NAME_AI:
         response = "exit"
     return response
 
 # Funciones de acción
 
 def greetings():
-    return "Hola Richard, te cuento que el día estará hoy nublado con 30°C, por lo que te recomiendo salir con short"
+    speak("Hola Richard, te detallo los eventos que tienes para hoy")
+
+    reminders = icloud.reminders_today()
+    events = icloud.calendar_today()
+
+    for e in events:
+        speak(e)
+
+    return "¡Que tengas un excelente día!"
+
+def chatgpt(prompt):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard. Responde en texto plano, sin usar Markdown"},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=MAX_TOKENS,
+        temperature=0.7
+    )
+
+    res = response.choices[0].message.content
+    print(res)
+    return res
 
 def chatgpt_data():
     prompt = ""
-    data = b""
 
-    texto = "¿en qué te puedo ayudar?"
-    tts = gTTS(texto, lang="es", tld="com.mx")
-    tts.save("response.mp3")
-    os.system(PLAYER + "response.mp3")
+    speak("¿En qué te puedo ayudar?")
 
     # Escuchar por 10 segundos
-    data = listen(10)
-    
-    result = recognize(data)
-    if result and 'text' in result:
-        prompt = result['text']
-    else:
-        prompt = "No se entendió la solicitud"
-    
+    prompt = listen(10)
+
     if DEV:
         prompt = "Dame una frase motivadora potente"
 
     print(f"prompt: {prompt}")
-    print("se enviará el request")
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{
             "role": "user",
             "content": prompt
         }],
-        max_tokens=MAX_TOKENS
+        max_tokens=MAX_TOKENS,
+        format="text"
     )
-    print("response recibido")
     res = response.choices[0].message.content
     return res
 
@@ -142,24 +172,20 @@ def main():
                     response = manage_request(REQUEST)
                     break
                 else:
-                    data = listen(5)
-                    result = recognize(data)
-                    if result and 'text' in result:
-                        request = result['text']
-                        print(request)
-                        response = manage_request(request)
-                        break
-                    else:
+                    request = listen(5)
+                    print(request)
+                    response = manage_request(request)
+                    if response == "error":
                         continue
+                    else:
+                        break
             if response == "exit":
                 break
             elif response == "":
                 continue
 
             print(response)
-            tts = gTTS(response, lang="es", tld="com.mx")
-            tts.save("response.mp3")
-            os.system(PLAYER + "response.mp3")
+            speak(response)
     except KeyboardInterrupt:
         pass
     finally:
