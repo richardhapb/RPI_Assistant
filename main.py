@@ -2,145 +2,171 @@ import os
 import sys
 import json
 import vosk
-import pexpect
 import pyaudio
+from openai import OpenAI
+from gtts import gTTS
 import time
 import config
 
+client = OpenAI(api_key=config.OPENAI_APIKEY)
 
-#########################
+kwrds_greetings = ['hola']
+kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
+kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
+kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+MAX_TOKENS = 100
+PLAYER = "cvlc --play-and-exit "
 
-# Configura la autenticación con Spotify
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=config.CLIENT_ID,
-                                               client_secret=config.CLIENT_SECRET,
-                                               redirect_uri="http://localhost:8080",
-                                               scope="user-read-playback-state,user-modify-playback-state"))
+DEV = False
+REQUEST = "tengo una duda"
+RATE = 16000
+CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 
-# Lista los dispositivos conectados
-devices = sp.devices()
-print("Dispositivos:", devices)
-
-def playlist():
-    # Reproduce una playlist específica
-    print("Reproduciendo playlist...")
-    sp.start_playback(device_id=config.ID_IPHONE, context_uri='spotify:playlist:4xZOpXJZVeKyE8Cm2PJb9m')
-
-def pause():
-    #
-    # Pausa la reproducción
-    print("Pausando...")
-    sp.pause_playback()
-
-def resume():
-    # Reanuda la reproducción
-    print("Reanudando...")
-    sp.start_playback()
-
-#########################
-
-
-def conectar_dispositivo(direccion_mac):
-    # Ejecuta bluetoothctl
-    child = pexpect.spawn('bluetoothctl', encoding='utf-8')
-
-    # Aumentar el tiempo de espera si es necesario
-    child.timeout = 10
-
-    # Activa Bluetooth
-    child.expect('#')
-    child.sendline('power on')
-    child.expect('#')
-    
-    # Ejecuta el escaneo
-    child.sendline('scan on')
-    child.expect('Discovery started')  # Espera la confirmación de que el escaneo ha comenzado
-    
-    # Dale tiempo al escaneo para encontrar dispositivos
-    time.sleep(5)  # Espera unos segundos para que el dispositivo sea detectado
-    
-    try: 
-        # Si es que no hay una conexión
-        child.sendline(f'info {direccion_mac}')
-        child.expect('Connected: no', timeout=3)
-        # Intenta conectarse
-        child.sendline(f'connect {direccion_mac}')
-        
-        # Espera una confirmación de conexión
-        try:
-            child.expect('Connected: yes', timeout=10)
-            print("Conexión realizada exitosamente.")
-        except pexpect.TIMEOUT:
-            print("La conexión no se realizó a tiempo. Verifica si el dispositivo está en modo de emparejamiento o si es accesible.")
-    except pexpect.TIMEOUT:
-        print('Conexión ya se encontraba establecida.')
-    
-    # Apaga el escaneo para ahorrar energía
-    child.sendline('scan off')
-    child.expect('#')
-    
-    # Salir de bluetoothctl
-    child.sendline('exit')
-    time.sleep(1)  # Espera un segundo para asegurarse de que los comandos se ejecuten completamente
-
-
-if __name__ == "__main__":
-    conectar_dispositivo(config.SONY_WH1000XM4)
-
-kwrds = ['reproduce música', 'pausa', 'reanuda']
+# Inicialización de PyAudio y apertura del flujo de entrada
+p = pyaudio.PyAudio()
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+stream.start_stream()
 
 if not os.path.exists("model"):
     print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
     sys.exit(1)
     
 model = vosk.Model("model")
-recognizer = vosk.KaldiRecognizer(model, 16000)
+recognizer = vosk.KaldiRecognizer(model, RATE)
 
 def recognize(data):
     if recognizer.AcceptWaveform(data):
         result = json.loads(recognizer.Result())
         return result
     else:
-        return None
+        return {}
+
+def obtain_response(prompt):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=MAX_TOKENS,
+        temperature=0.7,
+    )
+
+    res = response.choices[0].message.content
+    return res
+
+def listen(max_listening_time=5):
+    data = b""
+    start_time = time.time()
+
+    while time.time() - start_time < max_listening_time:
+        try:
+            chunk = stream.read(CHUNK, exception_on_overflow=False)
+            data += chunk
+        except Exception as e:
+            print(f"Error al leer el audio: {e}")
+            break
+    return data
+
+def manage_request(request):
+    response = ""
+    if request in kwrds_greetings:
+        response = greetings()
+    elif request in kwrds_chatgpt_data:
+        response = chatgpt_data()
+    elif request in kwrds_lamp_on:
+        response = lamp(True)
+    elif request in kwrds_lamp_off:
+        response = lamp(False)
+    elif request == "adiós":
+        response = "exit"
+    return response
+
+# Funciones de acción
+
+def greetings():
+    return "Hola Richard, te cuento que el día estará hoy nublado con 30°C, por lo que te recomiendo salir con short"
+
+def chatgpt_data():
+    prompt = ""
+    data = b""
+
+    texto = "¿en qué te puedo ayudar?"
+    tts = gTTS(texto, lang="es", tld="com.mx")
+    tts.save("response.mp3")
+    os.system(PLAYER + "response.mp3")
+
+    # Escuchar por 10 segundos
+    data = listen(10)
     
-def main():
-    p = pyaudio.PyAudio()
-    # Configurar el stream de audio para capturar desde el dispositivo 'pulse'
-    try:
-        stream = p.open(format=pyaudio.paInt16, 
-                        channels=1, 
-                        rate=16000, 
-                        input=True, 
-                        input_device_index=0, 
-                        frames_per_buffer=8192)
-        print("Listening...")
+    result = recognize(data)
+    if result and 'text' in result:
+        prompt = result['text']
+    else:
+        prompt = "No se entendió la solicitud"
+    
+    if DEV:
+        prompt = "Dame una frase motivadora potente"
+
+    print(f"prompt: {prompt}")
+    print("se enviará el request")
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": prompt
+        }],
+        max_tokens=MAX_TOKENS
+    )
+    print("response recibido")
+    res = response.choices[0].message.content
+    return res
+
+def lamp(on=True):
+    res = ""
+    if on:
+        res = "Lámpara encendida"
+    else:
+        res = "Lámpara apagada"
+    return res
         
+
+def main():
+    response = ""
+    try:
         while True:
-            try:
-                data = stream.read(4000, exception_on_overflow=False)
-                result = recognize(data).get('text').strip()
-                if not data:
+            print("Escuchando...")
+            while True:
+                if DEV:
+                    response = manage_request(REQUEST)
                     break
-                if result in kwrds:
-                    if result == kwrds[0]: # Reproduce
-                        playlist()
-                    if result == kwrds[1]: # Pausa
-                        pause()
-                    if result == kwrds[2]: # Reanuda
-                        resume()
-            except AttributeError:
-                pass
-            except IOError as e:
-                print(f"Error al leer datos de audio: {e}")
+                else:
+                    data = listen(5)
+                    result = recognize(data)
+                    if result and 'text' in result:
+                        request = result['text']
+                        print(request)
+                        response = manage_request(request)
+                        break
+                    else:
+                        continue
+            if response == "exit":
                 break
-        print("Done.")
+            elif response == "":
+                continue
+
+            print(response)
+            tts = gTTS(response, lang="es", tld="com.mx")
+            tts.save("response.mp3")
+            os.system(PLAYER + "response.mp3")
+    except KeyboardInterrupt:
+        pass
     finally:
+        print("Done.")
         stream.stop_stream()
         stream.close()
         p.terminate()
 
 if __name__ == "__main__":
-
     main()

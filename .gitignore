@@ -4,3 +4,5 @@ model
 .cache
 config.py
 __pycache__
+.lgd-nfy0
+*.mp3
