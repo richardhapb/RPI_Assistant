@@ -8,6 +8,7 @@ from gtts import gTTS
 import time
 import config
 import icloud
+import requests
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -16,17 +17,17 @@ NAME_AI = "octavia"
 # Keywords
 
 kwrds_activation = [NAME_AI]
-kwrds_greetings = ["buen día", "hola " + NAME_AI, "hola"]
+kwrds_greetings = ["buen día", "hola " + NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
-kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat']
+kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
 kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 
 MAX_TOKENS = 200
 PLAYER = "cvlc --play-and-exit "
 
-DEV = True
-REQUEST = "hola"
+DEV = False
+REQUEST = "buen día"
 RATE = 16000
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 
@@ -73,6 +74,46 @@ def speak(text):
     tts.save("response.mp3")
     os.system(PLAYER + "response.mp3")
 
+def weather(kind='weather', fc_days=1):
+
+    '''
+    kind = weather, forecast
+    '''
+
+    ## lat y lon La Cisterna
+    lat = -33.51738141625813
+    lon = -70.6567828851336
+
+    BASE_URL = "http://api.weatherapi.com/v1"
+    PARAMS = f"?lang=es&key={config.WEATHER_API_KEY}&q={lat},{lon}"
+    PARAMS += f"&days={fc_days}" if kind == 'forecast' else ""
+    
+    req = {
+        "weather": "/current.json",
+        "forecast": f"/forecast.json"
+    }
+
+    responses = {
+        "weather": "current",
+        "forecast": "forecast"
+    }
+
+    try:
+        response = requests.get(BASE_URL + req[kind] + PARAMS).json()[responses[kind]]
+        if kind == 'forecast':
+            response = response['forecastday'][0]['day']
+    except KeyError as e:
+        print("La solicitud no fue exitosa")
+        raise KeyError(e)
+    except Exception as e:
+        print("Error al obtener la información")
+        print(e)
+        response = "error"
+        raise Exception(e)
+    
+    return response
+
+
 def manage_request(request):
     response = ""
     if request in kwrds_greetings:
@@ -101,16 +142,67 @@ def manage_request(request):
         response = "exit"
     return response
 
+
 # Funciones de acción
 
 def greetings():
-    speak("Hola Richard, te detallo los eventos que tienes para hoy")
+    speak("Hola Richard, muy buenos días, ¡espero estés excelente!")
 
-    reminders = icloud.reminders_today()
-    events = icloud.calendar_today()
+    #### WEATHER
+    try:
+        w = weather()
+        f = weather('forecast')
 
-    for e in events:
-        speak(e)
+        if w['temp_c'] < 16:
+            speak("Hoy hace frío")
+        elif w['temp_c'] < 20:
+            speak("Está un poco frío, pero no mucho para ti")
+        else:
+            speak("Hoy hace calor")
+
+        speak(f"El cielo está {w['condition']['text']}")    
+        
+        speak(f"La temperatura actual es {w['temp_c']} grados celcius")
+        speak(f"Se espera una mínima de {f['mintemp_c']} y una máxima de {f['maxtemp_c']} grados celcius")
+        speak(f"La probabilidad de lluvia es {f['daily_chance_of_rain'] * 100}%")
+    except KeyError:
+        print("Error al obtener el clima")
+    except Exception as e:
+        print("Hubo en error")
+        print(e)
+
+    try:
+        # reminders = icloud.reminders_today()
+        events = icloud.calendar_today()
+        events = []
+
+        if events:
+            speak("Estos son tus eventos para hoy: ")
+            for e in events:
+                speak(e)
+        else:
+            speak("No tienes eventos agendados para hoy")
+    except ConnectionError:
+        print("Hubo un error al obtener los datos de iCloud")
+
+    ### Frase motivadora
+    try:
+        prompt = "Dame una frase motivadora potente, que haya dicho una persona exitósa, filósofo o científico. Que sea inspiradora. Damelo en texto plano, no uses markdown."
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }],
+            max_tokens=MAX_TOKENS
+        )
+        res = response.choices[0].message.content
+        speak("Tengo una frase motivadora para ti")
+        print(res)
+        speak(res)
+    except Exception as e:
+        print("Hubo un error al obtener la frase motivadora")
 
     return "¡Que tengas un excelente día!"
 
@@ -118,7 +210,7 @@ def chatgpt(prompt):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard. Responde en texto plano, sin usar Markdown"},
+            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard. Responde en texto plano, sin usar Markdown durante toda la conversación."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=MAX_TOKENS,
@@ -151,6 +243,7 @@ def chatgpt_data():
         format="text"
     )
     res = response.choices[0].message.content
+    print(res)
     return res
 
 def lamp(on=True):

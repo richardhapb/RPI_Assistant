@@ -47,10 +47,11 @@ def calendar_today():
         today = datetime.now().date()
         end = today + timedelta(days=1)
 
-        events = icloud.calendar.events(today, end)
-
         response = []
         elements = []
+        
+        events = icloud.calendar.events(today, end)
+
         for event in events:
             if event['localStartDate'][3] == today.day:
                 title, hours, minutes = event['title'], event['localStartDate'][4], event['localStartDate'][5]
