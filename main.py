@@ -9,6 +9,8 @@ import time
 import config
 import icloud
 import requests
+import spotify
+from spotipy import SpotifyException
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -70,9 +72,15 @@ def listen(max_listening_time=5):
     return res
 
 def speak(text):
+    playing_music = spotify.is_playing()
+    if playing_music:
+        spotify.pause()
     tts = gTTS(text, lang="es", tld="com.mx")
     tts.save("response.mp3")
     os.system(PLAYER + "response.mp3")
+
+    if playing_music:
+        spotify.resume()
 
 def weather(kind='weather', fc_days=1):
 
@@ -138,6 +146,27 @@ def manage_request(request):
         response = lamp(True)
     elif request in kwrds_lamp_off:
         response = lamp(False)
+    elif "música" in  request:
+        try:
+            if "detén" in request or "pausa" in request:
+                spotify.pause()
+            elif "reanuda" in request or "continúa" in request or "play" in request:
+                spotify.resume()
+            else:
+                last_word = request.split(" ")[-1]
+                if last_word == "música":
+                    spotify.playlist()
+                elif last_word == "viajar":
+                    spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
+                elif last_word == "estudiar":
+                    spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
+                elif last_word == "relajarme":
+                    spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
+        except SpotifyException:
+            speak("Hay un problema con Spotify")
+        except ValueError as e:
+            print(e)
+            speak(str(e))
     elif request == "adiós " + NAME_AI:
         response = "exit"
     return response
@@ -268,7 +297,8 @@ def main():
                     request = listen(5)
                     print(request)
                     response = manage_request(request)
-                    if response == "error":
+                    if response == "error" or request == "error":
+                        speak("No te escuché bien, ¿me puedes repetir?")
                         continue
                     else:
                         break
