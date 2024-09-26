@@ -6,7 +6,6 @@ import config
 
 try:
     icloud = PyiCloudService("","","com", None, None, config.ICLOUD_MAIL, config.ICLOUD_PASS)
-    icloud.devices
 
     if icloud.requires_2fa:
         print("Se requiere autenticación de dos factores.")
@@ -33,14 +32,6 @@ try:
 except PyiCloudFailedLoginException as e:
     print("Error al autenticar")
     print(e)
-
-def order_by_hour(events:list):
-    response = {}
-
-    for event in events:
-        for k in event.keys:
-            if k == 'startDate':
-                event[k][4]
 
 def calendar_today():
     try:
