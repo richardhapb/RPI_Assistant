@@ -21,6 +21,7 @@ NAME_AI = "octavia"
 # Keywords
 
 kwds_AI = ["octavia", "octavio", "o también", "o bien"]
+kwds_AI = ["octavia", "octavio", "o también", "o bien"]
 kwrds_greetings = ["buen día", "buen día " + NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
 kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
@@ -40,6 +41,8 @@ MAX_OCTAVIA_TIME = 10
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
 music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
 stream.start_stream()
 music.start_stream()
 
@@ -52,6 +55,8 @@ if not os.path.exists("model"):
 want_validate_icloud = True
 octavia = False
 octavia_since = 0
+paused = False
+stopped = True
 paused = False
 stopped = True
 
@@ -130,9 +135,17 @@ def listen(max_listening_time=5):
 
 def speak(text):
     global octavia_since, paused
+    global octavia_since, paused
     stream.stop_stream()
     playing_music = spotify.is_playing()
     if playing_music:
+        try:
+            spotify.pause()
+            paused = True
+            time.sleep(2)
+        except SpotifyException:
+            pass
+            
         try:
             spotify.pause()
             paused = True
