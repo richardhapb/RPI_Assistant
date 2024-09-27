@@ -53,6 +53,10 @@ want_validate_icloud = True
 octavia = False
 octavia_since = 0
 paused = False
+<<<<<<< HEAD
+=======
+stopped = True
+>>>>>>> 1348dbd (Ajustes en Spotify)
 
 ### ICLOUD
 def initicloud():
@@ -189,7 +193,7 @@ def weather(kind='weather', fc_days=1):
 
 
 def manage_request(request):
-    global want_validate_icloud, octavia, octavia_since, paused
+    global want_validate_icloud, octavia, octavia_since, paused, stopped
 
     response = ""
 
@@ -208,7 +212,7 @@ def manage_request(request):
         octavia = True
 
     
-    if spotify.is_playing() and int(time.time()) - octavia_since > MAX_OCTAVIA_TIME and paused:
+    if spotify.is_playing() and int(time.time()) - octavia_since > MAX_OCTAVIA_TIME and paused and not stopped:
         try:
             spotify.resume()
         except SpotifyException:
@@ -251,12 +255,14 @@ def manage_request(request):
                 if "detén" in request or "pausa" in request:
                     try:
                         spotify.pause()
-                        paused = True
+                        stopped = True
+                        paused = False
                     except SpotifyException:
                         res = "Hubo un problema con Spotify"
                 elif "reanuda" in request or "continúa" in request or "play" in request:
                     try:
                         spotify.resume()
+                        stopped = False
                         paused = False
                     except SpotifyException:
                         res = "Hubo un problema con Spotify"
