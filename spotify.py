@@ -3,6 +3,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import config
 import random
 
+DEFAULT_PLAYLIST = "spotify:playlist:7zH3limvqs46w9DYI5RH6x"
 
 # Autenticación con tus credenciales de Spotify
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=config.CLIENT_ID,
@@ -46,7 +47,7 @@ def shuffle(on=True, playlist_uri=""):
         # Iniciar la reproducción de las canciones en orden aleatorio
         sp.start_playback(uris=track_uris)
 
-def playlist(playlist_uri='spotify:playlist:4xZOpXJZVeKyE8Cm2PJb9m', random=True):
+def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True):
     device = get_device('raspotify (RP1)')
 
     if(device):
@@ -56,7 +57,7 @@ def playlist(playlist_uri='spotify:playlist:4xZOpXJZVeKyE8Cm2PJb9m', random=True
         else:
             # Reproduce una playlist específica
             print("Reproduciendo playlist...")
-            sp.start_playback(device_id=device, context_uri='spotify:playlist:4xZOpXJZVeKyE8Cm2PJb9m')
+            sp.start_playback(device_id=device, context_uri=DEFAULT_PLAYLIST)
     else:
         print("No se encontró el dispositivo")
         raise ValueError("Lo siento, no se encontró el dispositivo de reproducción")
