@@ -1,24 +1,24 @@
 from gpiozero import OutputDevice
-import time
 
-# Asignar la fábrica al dispositivo
-lamp = OutputDevice(17, active_high=False, initial_value=False)
 
-def main_lamp():
+lamp = None
+
+def light(on:bool):
+    global lamp
     try:
-        while True:
-            # Activar el relé
+        if(on):
+            if not lamp:
+                lamp = OutputDevice(17, active_high=False, initial_value=False)
+                print("Relé activo")
             lamp.on()
-            print("Relé activado")
-            time.sleep(2)  # Esperar 2 segundos
-
-            # Desactivar el relé
-            lamp.off()  #  Desactiva el relé
-            print("Relé desactivado")
-            time.sleep(2)  # Esperar 2 segundos
-
-    except KeyboardInterrupt:
-        print("Proceso terminado")
-
-    finally:
-        lamp.close()  # Limpiar los GPIO al salir
+        else:
+            if lamp:
+                lamp.off()
+                print("Relé apagado")
+    except Exception as e:
+        print("Hubo un error")
+        raise Exception(e)
+    
+def close():
+    if lamp:
+        lamp.close()

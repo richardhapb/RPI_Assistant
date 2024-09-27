@@ -11,6 +11,9 @@ import icloud
 import requests
 import spotify
 from spotipy import SpotifyException
+import lamp
+import utils
+import datetime
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -19,7 +22,7 @@ NAME_AI = "octavia"
 # Keywords
 
 kwrds_activation = [NAME_AI]
-kwrds_greetings = ["buen día", "hola " + NAME_AI, "muy buenos días", "buenos días"]
+kwrds_greetings = ["buen día", "buen día " + NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
 kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
 kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
@@ -32,18 +35,71 @@ DEV = False
 REQUEST = "buen día"
 RATE = 16000
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
+MAX_OCTAVIA_TIME = 10
 
 # Inicialización de PyAudio y apertura del flujo de entrada
 p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK, input_device_index=2)
+music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output_device_index=2, output=True)
 stream.start_stream()
+music.start_stream()
 
 if not os.path.exists("model"):
     print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
     sys.exit(1)
-    
+
+## GLOBALS
+
+want_validate_icloud = True
+octavia = False
+octavia_since = 0
+
+### ICLOUD
+def initicloud():
+    result = icloud.init_icloud()
+
+    if result: return
+
+    ### Se requiere autenticación 2fa
+    print("Se requiere autenticación de dos factores.")
+    speak("Dame el código de icloud para la verifícación de segundo paso")
+
+    while True:
+        res = listen(max_listening_time = 10)
+        while res == "error":
+            speak("Me puedes repetir por favor")
+            res = listen(max_listening_time = 10)
+        
+        code = utils.text_to_number(res)
+        print(code)
+
+        if icloud.pass_2fa(code):
+            try:
+                result = icloud.init_icloud(code)
+                if result:
+                    speak("Ingreso correcto")
+                    break
+            except PermissionError:
+                speak("Hubo un error en el ingreso a iCloud")
+                continue
+        else:
+            speak("Lo siento, escuché mal el código")
+
 model = vosk.Model("model")
 recognizer = vosk.KaldiRecognizer(model, RATE)
+
+def validate_icloud():
+    global want_validate_icloud
+
+    if not icloud.validated and want_validate_icloud:
+        speak("Richard, icloud no está validado, ¿quieres proporcionar el acceso?")
+        response = listen()
+
+        if response == "si":
+            initicloud()
+        else:
+            speak("Ok, avísame si quieres validar iCloud")
+            want_validate_icloud = False
 
 def recognize(data):
     if recognizer.AcceptWaveform(data):
@@ -72,6 +128,8 @@ def listen(max_listening_time=5):
     return res
 
 def speak(text):
+    global octavia_since
+    stream.stop_stream()
     playing_music = spotify.is_playing()
     if playing_music:
         spotify.pause()
@@ -81,6 +139,11 @@ def speak(text):
 
     if playing_music:
         spotify.resume()
+
+    validate_icloud()
+    
+    stream.start_stream()
+    octavia_since = int(time.time())
 
 def weather(kind='weather', fc_days=1):
 
@@ -123,52 +186,78 @@ def weather(kind='weather', fc_days=1):
 
 
 def manage_request(request):
-    response = ""
-    if request in kwrds_greetings:
-        response = greetings()
-    elif request in kwrds_chatgpt:
-        prompt = ""
-        speak("Si Richard, dime que necesitas")
-        while True:
-            prompt = listen(10)
-            print(listen)
-            exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
-            if prompt in exit:
-                speak("De nada Richard, avísame si necesitas algo más")
-                break
-            gpt = chatgpt(prompt)
-            print(gpt)
-            speak(gpt)
+    global want_validate_icloud, octavia, octavia_since
 
-    elif request in kwrds_chatgpt_data:
-        response = chatgpt_data()
-    elif request in kwrds_lamp_on:
-        response = lamp(True)
-    elif request in kwrds_lamp_off:
-        response = lamp(False)
-    elif "música" in  request:
-        try:
-            if "detén" in request or "pausa" in request:
-                spotify.pause()
-            elif "reanuda" in request or "continúa" in request or "play" in request:
-                spotify.resume()
+    response = ""
+    
+    print(f"t2:{octavia_since}")
+    print(f"t2-t1:{int(time.time())} - {octavia_since} = {int(time.time()) - octavia_since}")
+
+    if octavia_since == 0 and NAME_AI not in request:
+        return response
+    elif NAME_AI in request:
+        if int(time.time()) - octavia_since > MAX_OCTAVIA_TIME:
+            octavia = True
+    elif int(time.time()) - octavia_since <= MAX_OCTAVIA_TIME:
+        octavia = True
+
+    print(f"Octavia: {octavia}")
+    
+    if octavia:
+        if request in kwrds_greetings:
+            response = greetings()
+        elif NAME_AI in request:
+            response = "¿Si Richard?"
+        elif request in kwrds_chatgpt:
+            prompt = ""
+            speak("Si Richard, dime que necesitas")
+            while True:
+                prompt = listen(10)
+                print(listen)
+                exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
+                if prompt in exit:
+                    speak("De nada Richard, avísame si necesitas algo más")
+                    break
+                gpt = chatgpt(prompt)
+                print(gpt)
+                speak(gpt)
+
+        elif request in kwrds_chatgpt_data:
+            response = chatgpt_data()
+        elif request in kwrds_lamp_on:
+            response = light(True)
+        elif request in kwrds_lamp_off:
+            response = light(False)
+        elif "icloud" in request or "cloud" in request or "club" in request or "clavo" in request:
+            if icloud.validated:
+                speak("Si richard, se encuentra validado el acceso a iCloud")
             else:
-                last_word = request.split(" ")[-1]
-                if last_word == "música":
-                    spotify.playlist()
-                elif last_word == "viajar":
-                    spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
-                elif last_word == "estudiar":
-                    spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
-                elif last_word == "relajarme":
-                    spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
-        except SpotifyException:
-            speak("Hay un problema con Spotify")
-        except ValueError as e:
-            print(e)
-            speak(str(e))
-    elif request == "adiós " + NAME_AI:
-        response = "exit"
+                speak("No richard, no se encuentra validado el acceso a iCloud")
+                want_validate_icloud = True
+            validate_icloud()
+        elif "música" in  request:
+            try:
+                if "detén" in request or "pausa" in request:
+                    spotify.pause()
+                elif "reanuda" in request or "continúa" in request or "play" in request:
+                    spotify.resume()
+                else:
+                    last_word = request.split(" ")[-1]
+                    if last_word == "música":
+                        spotify.playlist()
+                    elif last_word == "viajar":
+                        spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
+                    elif last_word == "estudiar":
+                        spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
+                    elif last_word == "relajarme":
+                        spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
+            except SpotifyException:
+                speak("Hay un problema con Spotify")
+            except ValueError as e:
+                print(e)
+                speak(str(e))
+        elif request == "adiós " + NAME_AI:
+            response = "exit"
     return response
 
 
@@ -203,7 +292,6 @@ def greetings():
     try:
         # reminders = icloud.reminders_today()
         events = icloud.calendar_today()
-        events = []
 
         if events:
             speak("Estos son tus eventos para hoy: ")
@@ -239,8 +327,8 @@ def chatgpt(prompt):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard. Responde en texto plano, sin usar Markdown durante toda la conversación."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard."},
+            {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
         ],
         max_tokens=MAX_TOKENS,
         temperature=0.7
@@ -275,16 +363,20 @@ def chatgpt_data():
     print(res)
     return res
 
-def lamp(on=True):
+def light(on=True):
     res = ""
     if on:
-        res = "Lámpara encendida"
+        lamp.light(on)
+        res = "Listo"
     else:
-        res = "Lámpara apagada"
+        lamp.light(on)
+        res = "Listo"
     return res
         
 
 def main():
+    global octavia_since, octavia
+    initicloud()
     response = ""
     try:
         while True:
@@ -298,23 +390,27 @@ def main():
                     print(request)
                     response = manage_request(request)
                     if response == "error" or request == "error":
-                        speak("No te escuché bien, ¿me puedes repetir?")
                         continue
                     else:
                         break
             if response == "exit":
+                speak("adiós Richard")
                 break
             elif response == "":
+                octavia = False
                 continue
 
             print(response)
             speak(response)
+            octavia = False
     except KeyboardInterrupt:
         pass
     finally:
         print("Done.")
         stream.stop_stream()
         stream.close()
+        music.stop_stream()
+        music.close()
         p.terminate()
 
 if __name__ == "__main__":
