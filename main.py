@@ -53,10 +53,7 @@ want_validate_icloud = True
 octavia = False
 octavia_since = 0
 paused = False
-<<<<<<< HEAD
-=======
 stopped = True
->>>>>>> 1348dbd (Ajustes en Spotify)
 
 ### ICLOUD
 def initicloud():
@@ -258,14 +255,14 @@ def manage_request(request):
                         stopped = True
                         paused = False
                     except SpotifyException:
-                        res = "Hubo un problema con Spotify"
+                        response = "Hubo un problema con Spotify"
                 elif "reanuda" in request or "continúa" in request or "play" in request:
                     try:
                         spotify.resume()
                         stopped = False
                         paused = False
                     except SpotifyException:
-                        res = "Hubo un problema con Spotify"
+                        response = "Hubo un problema con Spotify"
                 else:
                     last_word = request.split(" ")[-1]
                     if last_word == "música":
