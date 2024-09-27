@@ -13,7 +13,6 @@ import spotify
 from spotipy import SpotifyException
 import lamp
 import utils
-import datetime
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -21,7 +20,7 @@ NAME_AI = "octavia"
 
 # Keywords
 
-kwrds_activation = [NAME_AI]
+kwds_AI = ["octavia", "octavio", "o también", "o bien"]
 kwrds_greetings = ["buen día", "buen día " + NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
 kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
@@ -39,8 +38,8 @@ MAX_OCTAVIA_TIME = 10
 
 # Inicialización de PyAudio y apertura del flujo de entrada
 p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK, input_device_index=2)
-music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output_device_index=2, output=True)
+stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
 stream.start_stream()
 music.start_stream()
 
@@ -53,6 +52,7 @@ if not os.path.exists("model"):
 want_validate_icloud = True
 octavia = False
 octavia_since = 0
+paused = False
 
 ### ICLOUD
 def initicloud():
@@ -128,17 +128,20 @@ def listen(max_listening_time=5):
     return res
 
 def speak(text):
-    global octavia_since
+    global octavia_since, paused
     stream.stop_stream()
     playing_music = spotify.is_playing()
     if playing_music:
-        spotify.pause()
+        try:
+            spotify.pause()
+            paused = True
+            time.sleep(2)
+        except SpotifyException:
+            pass
+            
     tts = gTTS(text, lang="es", tld="com.mx")
     tts.save("response.mp3")
     os.system(PLAYER + "response.mp3")
-
-    if playing_music:
-        spotify.resume()
 
     validate_icloud()
     
@@ -186,27 +189,35 @@ def weather(kind='weather', fc_days=1):
 
 
 def manage_request(request):
-    global want_validate_icloud, octavia, octavia_since
+    global want_validate_icloud, octavia, octavia_since, paused
 
     response = ""
-    
-    print(f"t2:{octavia_since}")
-    print(f"t2-t1:{int(time.time())} - {octavia_since} = {int(time.time()) - octavia_since}")
 
-    if octavia_since == 0 and NAME_AI not in request:
+    name_ai = False
+
+    for n in kwds_AI:
+        if n in request:
+            name_ai = True
+
+    if octavia_since == 0 and not name_ai:
         return response
-    elif NAME_AI in request:
+    elif name_ai:
         if int(time.time()) - octavia_since > MAX_OCTAVIA_TIME:
             octavia = True
     elif int(time.time()) - octavia_since <= MAX_OCTAVIA_TIME:
         octavia = True
 
-    print(f"Octavia: {octavia}")
     
+    if spotify.is_playing() and int(time.time()) - octavia_since > MAX_OCTAVIA_TIME and paused:
+        try:
+            spotify.resume()
+        except SpotifyException:
+            pass
+
     if octavia:
         if request in kwrds_greetings:
             response = greetings()
-        elif NAME_AI in request:
+        elif name_ai:
             response = "¿Si Richard?"
         elif request in kwrds_chatgpt:
             prompt = ""
@@ -225,9 +236,9 @@ def manage_request(request):
         elif request in kwrds_chatgpt_data:
             response = chatgpt_data()
         elif request in kwrds_lamp_on:
-            response = light(True)
+            response = "Lampara encendida"
         elif request in kwrds_lamp_off:
-            response = light(False)
+            response = "Lampara apagada"
         elif "icloud" in request or "cloud" in request or "club" in request or "clavo" in request:
             if icloud.validated:
                 speak("Si richard, se encuentra validado el acceso a iCloud")
@@ -238,9 +249,17 @@ def manage_request(request):
         elif "música" in  request:
             try:
                 if "detén" in request or "pausa" in request:
-                    spotify.pause()
+                    try:
+                        spotify.pause()
+                        paused = True
+                    except SpotifyException:
+                        res = "Hubo un problema con Spotify"
                 elif "reanuda" in request or "continúa" in request or "play" in request:
-                    spotify.resume()
+                    try:
+                        spotify.resume()
+                        paused = False
+                    except SpotifyException:
+                        res = "Hubo un problema con Spotify"
                 else:
                     last_word = request.split(" ")[-1]
                     if last_word == "música":
