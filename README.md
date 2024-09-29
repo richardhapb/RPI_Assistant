@@ -54,30 +54,41 @@ link: https://alphacephei.com/vosk/models
 El arhivo config.py tiene la siguiente estructura:
 
 ### AI
+```python
 
-NAME_AI = <nombre de asistente virtual para reconocimiento>
-KWDS_AI = [<Lista con keywords que identifica a asistente>]
+NAME_AI = # <nombre de asistente virtual para reconocimiento>
+KWDS_AI = # [<Lista con keywords que identifica a asistente>]
+```
+
+### User
+
+```python
+NAME_USER = # <Nombre del usuario>
+```
 
 ### Spotify
 
-CLIENT_ID = <Client id de Spotify>
-CLIENT_SECRET = <Client secret de Spotify>
-
+```python
+CLIENT_ID = # <Client id de Spotify>
+CLIENT_SECRET = # <Client secret de Spotify>
+```
 
 ### OpenAI
 
-OPENAI_APIKEY=<Key de api OpenAI>
+```python
+OPENAI_APIKEY = # <Key de api OpenAI>
+```
 
 ### iCloud
-
-ICLOUD_MAIL=<id de icloud para acceso a datos>
-ICLOUD_PASS=<password de icloud>
-
+```python
+ICLOUD_MAIL = # <id de icloud para acceso a datos>
+ICLOUD_PASS = # <password de icloud>
+```
 ### Weather
+```python
+WEATHER_API_KEY = # <API KEY de [weather api](https://www.weatherapi.com)>
 
-WEATHER_API_KEY=<API KEY de [weather api](https://www.weatherapi.com)>
+LAT = # <coordenadas de longitud para el clima>
+LON = # <coordenadas de latitud para el clima>
 
-LAT = <coordenadas de longitud para el clima>
-LON = <coordenadas de latitud para el clima>
-
-
+```
