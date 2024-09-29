@@ -2,6 +2,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import config
 import random
+from requests.exceptions import ReadTimeout
 
 DEFAULT_PLAYLIST = "spotify:playlist:7zH3limvqs46w9DYI5RH6x"
 
@@ -74,4 +75,9 @@ def resume():
     sp.start_playback()
 
 def is_playing():
-    return not sp.current_playback() == None
+    try:
+        playing = not sp.current_playback() == None
+    except ReadTimeout:
+        print("Hubo un problema al acceder a la información")
+        playing = False
+    return playing
