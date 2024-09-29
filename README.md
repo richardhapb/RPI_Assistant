@@ -53,7 +53,7 @@ sudo apt-get install vlc
 
 ---
 
-Se requiere descargar modelo de reconocimiento de voz en español y renombrar carpeta a model, dejarlo en carpeta de proyecto.
+Se requiere descargar modelo de reconocimiento de voz en español y renombrar carpeta a model, dejarlo en carpeta raíz del proyecto.
 
 link: https://alphacephei.com/vosk/models
 
@@ -67,7 +67,7 @@ pip install -r requirements.txt
 
 ---
 
-El arhivo config.py tiene la siguiente estructura:
+El arhivo `config.py` tiene la siguiente estructura:
 
 ### AI
 ```python
