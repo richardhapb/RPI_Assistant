@@ -12,7 +12,7 @@ sudo apt-get install python3-pip libglib2.0-dev # bluepy
 
 En .venv/lib64/pyicloud_ipd/services modificar archivos reminder.py y calendar.py
 
-Nota: Dependiendo la versión puede ser .venv/lib o .venv/lib64
+*Nota: Dependiendo la versión puede ser .venv/lib o .venv/lib64*
 
 Reemplazar (puede variar la forma inicial)
 
@@ -47,9 +47,16 @@ VLC player para reproducción de voz en Raspberry PI:
 sudo apt-get install vlc
 ```
 
-Se requiere descargar modelo para RPI en español y renombrar carpeta a model, dejarlo en carpeta de proyecto, esto es para la captación de voz
+Se requiere descargar modelo de reconocimiento de voz en español y renombrar carpeta a model, dejarlo en carpeta de proyecto.
 
 link: https://alphacephei.com/vosk/models
+
+
+Adicionalmente instalar dependencias del proyecto con
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
