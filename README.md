@@ -3,14 +3,16 @@ Este proyecto está orientando a generar un asistente virtual para una oficina /
 
 ## Dependencias
 
-Para usar pyaudio y bluepy es necesario instalar dependencias:
+Para usar pyaudio y bluepy es necesario instalar dependencias en la Raspberry PI:
 
 ```bash
 sudo apt install portaudio19-dev python3-pyaudio # pyaudio
 sudo apt-get install python3-pip libglib2.0-dev # bluepy
 ```
 
-En pyicloud_ipd/services modificar archivos reminder.py y calendar.py
+En .venv/lib64/pyicloud_ipd/services modificar archivos reminder.py y calendar.py
+
+Nota: Dependiendo la versión puede ser .venv/lib o .venv/lib64
 
 Reemplazar (puede variar la forma inicial)
 
@@ -39,13 +41,13 @@ local_zone = get_localzone()
         })
 ```
 
-VLC player para reproducción de voz:
+VLC player para reproducción de voz en Raspberry PI:
 
 ```bash
 sudo apt-get install vlc
 ```
 
-Se requiere descargar modelo para RPI en español y renombrar carpeta a model, dejarlo en carpeta de proyecto
+Se requiere descargar modelo para RPI en español y renombrar carpeta a model, dejarlo en carpeta de proyecto, esto es para la captación de voz
 
 link: https://alphacephei.com/vosk/models
 
