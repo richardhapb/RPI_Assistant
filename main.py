@@ -16,51 +16,53 @@ import utils
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
-NAME_AI = "octavia"
-
 # Keywords
 
-kwds_AI = ["octavia", "octavio", "o también", "o bien"]
-kwrds_greetings = ["buen día", "buen día " + NAME_AI, "muy buenos días", "buenos días"]
+
+kwrds_greetings = ["buen día", "buen día " + config.NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
 kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
 kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 
+# Constantes
+
 MAX_TOKENS = 200
 PLAYER = "cvlc --play-and-exit "
 
-DEV = False
-REQUEST = "buen día"
-RATE = 16000
+DEV = False # ¿Modo desarrollo?
+REQUEST = "buen día" # Request predeterminado para desarrollo
+RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
-MAX_OCTAVIA_TIME = 10
+MAX_AI_TIME = 10 # Tiempo que asistente está activa
 
-# Inicialización de PyAudio y apertura del flujo de entrada
+# Inicialización de PyAudio y apertura del flujo de entrada/salida
 p = pyaudio.PyAudio()
+
+# Micrófono
 stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
-music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
-stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
-music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
 stream.start_stream()
+
+# Música
+music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
 music.start_stream()
 
+# Módelo para reconocmiento de voz
 if not os.path.exists("model"):
     print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
     sys.exit(1)
 
 ## GLOBALS
 
-want_validate_icloud = False
-octavia = False
-octavia_since = 0
-paused = False
-stopped = True
-paused = False
-stopped = True
+want_validate_icloud = False # ¿Usuario quiere validar icloud en caso de no estarlo?
+ai = False # ¿Asistente activa?
+ai_since = 0 # ¿Desde cuándo está activa?
+paused = False # ¿Música pausada para hablar?
+stopped = True # ¿Música totalmente detenida?
 
 ### ICLOUD
 def initicloud():
+    '''Inicia sesión en iCloud'''
     global want_validate_icloud
     result = icloud.init_icloud()
 
@@ -104,10 +106,11 @@ model = vosk.Model("model")
 recognizer = vosk.KaldiRecognizer(model, RATE)
 
 def validate_icloud():
+    '''Veriica si iCloud está iniciado'''
     global want_validate_icloud
 
     if not icloud.validated and want_validate_icloud:
-        speak("Richard, icloud no está validado, ¿quieres proporcionar el acceso?")
+        speak(f"{config.NAME_USER}, icloud no está validado, ¿quieres proporcionar el acceso?")
         response = listen()
         time.sleep(5)
 
@@ -118,6 +121,7 @@ def validate_icloud():
             want_validate_icloud = False
 
 def recognize(data):
+    '''Reconoce el audio del usuario'''
     if recognizer.AcceptWaveform(data):
         result = json.loads(recognizer.Result())
         return result
@@ -125,6 +129,7 @@ def recognize(data):
         return {}
 
 def listen(max_listening_time=5):
+    '''Capta la voz del usuario'''
     data = b""
     start_time = time.time()
 
@@ -144,8 +149,9 @@ def listen(max_listening_time=5):
     return res
 
 def speak(text):
-    global octavia_since, paused
-    global octavia_since, paused
+    '''Habla el texto ingresado'''
+    global ai_since, paused
+    global ai_since, paused
     stream.stop_stream()
     playing_music = spotify.is_playing()
     if playing_music:
@@ -170,17 +176,18 @@ def speak(text):
     validate_icloud()
     
     stream.start_stream()
-    octavia_since = int(time.time())
+    ai_since = int(time.time())
 
 def weather(kind='weather', fc_days=1):
 
     '''
+    Obtiene el clima de hoy o proyectado
     kind = weather, forecast
     '''
 
-    ## lat y lon La Cisterna
-    lat = -33.51738141625813
-    lon = -70.6567828851336
+    ## lat y lon locales
+    lat = config.LAT
+    lon = config.LON
 
     BASE_URL = "http://api.weatherapi.com/v1"
     PARAMS = f"?lang=es&key={config.WEATHER_API_KEY}&q={lat},{lon}"
@@ -213,45 +220,46 @@ def weather(kind='weather', fc_days=1):
 
 
 def manage_request(request):
-    global want_validate_icloud, octavia, octavia_since, paused, stopped
+    '''Ciclo principal donde se controla el flujo según orden de usuario'''
+    global want_validate_icloud, ai, ai_since, paused, stopped
 
     response = ""
 
     name_ai = False
 
-    for n in kwds_AI:
+    for n in config.KWDS_AI:
         if n in request:
             name_ai = True
 
-    if octavia_since == 0 and not name_ai:
+    if ai_since == 0 and not name_ai:
         return response
     elif name_ai:
-        if int(time.time()) - octavia_since > MAX_OCTAVIA_TIME:
-            octavia = True
-    elif int(time.time()) - octavia_since <= MAX_OCTAVIA_TIME:
-        octavia = True
+        if int(time.time()) - ai_since > MAX_AI_TIME:
+            ai = True
+    elif int(time.time()) - ai_since <= MAX_AI_TIME:
+        ai = True
 
     
-    if spotify.is_playing() and int(time.time()) - octavia_since > MAX_OCTAVIA_TIME and paused and not stopped:
+    if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
         try:
             spotify.resume()
         except SpotifyException:
             pass
 
-    if octavia:
+    if ai:
         if request in kwrds_greetings:
             response = greetings()
         elif name_ai:
-            response = "¿Si Richard?"
+            response = f"¿Si {config.NAME_USER}?"
         elif request in kwrds_chatgpt:
             prompt = ""
-            speak("Si Richard, dime que necesitas")
+            speak(f"Si {config.NAME_USER}, dime que necesitas")
             while True:
                 prompt = listen(10)
                 print(listen)
                 exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
                 if prompt in exit:
-                    speak("De nada Richard, avísame si necesitas algo más")
+                    speak(f"De nada {config.NAME_USER}, avísame si necesitas algo más")
                     break
                 gpt = chatgpt(prompt)
                 print(gpt)
@@ -267,9 +275,9 @@ def manage_request(request):
             response = "Lámpara apagada"
         elif "icloud" in request or "cloud" in request or "club" in request or "clavo" in request:
             if icloud.validated:
-                speak("Si richard, se encuentra validado el acceso a iCloud")
+                speak(f"Si {config.NAME_USER}, se encuentra validado el acceso a iCloud")
             else:
-                speak("No richard, no se encuentra validado el acceso a iCloud")
+                speak(f"No {config.NAME_USER}, no se encuentra validado el acceso a iCloud")
                 want_validate_icloud = True
             validate_icloud()
         elif "música" in  request:
@@ -300,12 +308,13 @@ def manage_request(request):
                         spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
                     elif last_word == "relajarme":
                         spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
+                    stopped = False
             except SpotifyException:
                 speak("Hay un problema con Spotify")
             except ValueError as e:
                 print(e)
                 speak(str(e))
-        elif request == "adiós " + NAME_AI:
+        elif request == "adiós " and name_ai:
             response = "exit"
     return response
 
@@ -313,7 +322,8 @@ def manage_request(request):
 # Funciones de acción
 
 def greetings():
-    speak("Hola Richard, muy buenos días, ¡espero estés excelente!")
+    '''Da los buenos días e información relevante'''
+    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
 
     #### WEATHER
     try:
@@ -373,10 +383,11 @@ def greetings():
     return "¡Que tengas un excelente día!"
 
 def chatgpt(prompt):
+    '''Inicia un chat con API de OpenAI'''
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es Octavia, mi nombre es Richard."},
+            {"role": "system", "content": f"Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es {config.NAME_AI}, mi nombre es {config.NAME_USER}."},
             {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
         ],
         max_tokens=MAX_TOKENS,
@@ -388,6 +399,7 @@ def chatgpt(prompt):
     return res
 
 def chatgpt_data():
+    '''Obtiene un dato puntual de Chat GPT a través de la api'''
     prompt = ""
 
     speak("¿En qué te puedo ayudar?")
@@ -413,6 +425,7 @@ def chatgpt_data():
     return res
 
 def light(on=True):
+    '''Enciende/apaga la luz (conectada a RPI)'''
     res = ""
     if on:
         lamp.light(on)
@@ -424,7 +437,8 @@ def light(on=True):
         
 
 def main():
-    global octavia_since, octavia
+    '''Función principal de captación de voz'''
+    global ai_since, ai
     initicloud()
     response = ""
     try:
@@ -443,15 +457,15 @@ def main():
                     else:
                         break
             if response == "exit":
-                speak("adiós Richard")
+                speak(f"adiós {config.NAME_USER}")
                 break
             elif response == "":
-                octavia = False
+                ai = False
                 continue
 
             print(response)
             speak(response)
-            octavia = False
+            ai = False
     except KeyboardInterrupt:
         pass
     finally:

@@ -43,3 +43,29 @@ sudo apt-get install vlc
 Se requiere descargar modelo para RPI en español y renombrar carpeta a model, dejarlo en carpeta de proyecto
 
 link: https://alphacephei.com/vosk/models
+
+---
+
+El arhivo config.py tiene la siguiente estructura:
+
+## AI
+
+NAME_AI = <nombre de asistente virtual para reconocimiento>
+KWDS_AI = [<Lista con keywords que identifica a asistente>]
+
+### Spotify
+
+CLIENT_ID = <Client id de Spotify>
+CLIENT_SECRET = <Client secret de Spotify>
+
+OPENAI_APIKEY=<Key de api OpenAI>
+
+ICLOUD_MAIL=<id de icloud para acceso a datos>
+ICLOUD_PASS=<password de icloud>
+
+WEATHER_API_KEY=<API KEY de [weather api](https://www.weatherapi.com)>
+
+LAT = <coordenadas de longitud para el clima>
+LON = <coordenadas de latitud para el clima>
+
+
