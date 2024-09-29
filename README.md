@@ -59,6 +59,10 @@ link: https://alphacephei.com/vosk/models
 
 ---
 
+Instalar Raspotify, se puede usar `install_raspotify.sh` para realizar el proceso rápidamente.
+
+---
+
 Adicionalmente instalar dependencias del proyecto con
 
 ```bash
@@ -67,7 +71,7 @@ pip install -r requirements.txt
 
 ---
 
-El arhivo `config.py` tiene la siguiente estructura:
+El archivo `config.py` tiene la siguiente estructura, éste está ubicado en la raíz del proyecto y tiene los datos que utilizará el software para el proceso:
 
 ### AI
 ```python
