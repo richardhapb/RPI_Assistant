@@ -21,7 +21,6 @@ NAME_AI = "octavia"
 # Keywords
 
 kwds_AI = ["octavia", "octavio", "o también", "o bien"]
-kwds_AI = ["octavia", "octavio", "o también", "o bien"]
 kwrds_greetings = ["buen día", "buen día " + NAME_AI, "muy buenos días", "buenos días"]
 kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
 kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
@@ -52,7 +51,7 @@ if not os.path.exists("model"):
 
 ## GLOBALS
 
-want_validate_icloud = True
+want_validate_icloud = False
 octavia = False
 octavia_since = 0
 paused = False
@@ -62,9 +61,12 @@ stopped = True
 
 ### ICLOUD
 def initicloud():
+    global want_validate_icloud
     result = icloud.init_icloud()
 
-    if result: return
+    if result: 
+        want_validate_icloud = True
+        return
 
     ### Se requiere autenticación 2fa
     print("Se requiere autenticación de dos factores.")
@@ -72,9 +74,14 @@ def initicloud():
 
     while True:
         res = listen(max_listening_time = 10)
+        count = 0
         while res == "error":
             speak("Me puedes repetir por favor")
             res = listen(max_listening_time = 10)
+            count += 1
+            if count >= 5:
+                want_validate_icloud = True
+                return
         
         code = utils.text_to_number(res)
         print(code)
@@ -90,6 +97,8 @@ def initicloud():
                 continue
         else:
             speak("Lo siento, escuché mal el código")
+        
+        want_validate_icloud = True
 
 model = vosk.Model("model")
 recognizer = vosk.KaldiRecognizer(model, RATE)
@@ -100,6 +109,7 @@ def validate_icloud():
     if not icloud.validated and want_validate_icloud:
         speak("Richard, icloud no está validado, ¿quieres proporcionar el acceso?")
         response = listen()
+        time.sleep(5)
 
         if response == "si":
             initicloud()
@@ -250,9 +260,11 @@ def manage_request(request):
         elif request in kwrds_chatgpt_data:
             response = chatgpt_data()
         elif request in kwrds_lamp_on:
-            response = "Lampara encendida"
+            lamp.light(True)
+            response = "Lámpara encendida"
         elif request in kwrds_lamp_off:
-            response = "Lampara apagada"
+            lamp.light(False)
+            response = "Lámpara apagada"
         elif "icloud" in request or "cloud" in request or "club" in request or "clavo" in request:
             if icloud.validated:
                 speak("Si richard, se encuentra validado el acceso a iCloud")
@@ -265,6 +277,7 @@ def manage_request(request):
                 if "detén" in request or "pausa" in request:
                     try:
                         spotify.pause()
+                        speak("listo")
                         stopped = True
                         paused = False
                     except SpotifyException:
@@ -272,6 +285,7 @@ def manage_request(request):
                 elif "reanuda" in request or "continúa" in request or "play" in request:
                     try:
                         spotify.resume()
+                        speak("listo")
                         stopped = False
                         paused = False
                     except SpotifyException:
@@ -446,6 +460,7 @@ def main():
         stream.close()
         music.stop_stream()
         music.close()
+        lamp.close()
         p.terminate()
 
 if __name__ == "__main__":

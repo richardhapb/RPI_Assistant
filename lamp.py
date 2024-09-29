@@ -1,14 +1,14 @@
 from gpiozero import OutputDevice
 
 
-lamp = None
+lamp = OutputDevice(17, active_high=True, initial_value=False)
 
 def light(on:bool):
     global lamp
     try:
         if(on):
             if not lamp:
-                lamp = OutputDevice(17, active_high=False, initial_value=False)
+                lamp.on()
                 print("Relé activo")
             lamp.on()
         else:
