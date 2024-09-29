@@ -10,7 +10,9 @@ sudo apt install portaudio19-dev python3-pyaudio # pyaudio
 sudo apt-get install python3-pip libglib2.0-dev # bluepy
 ```
 
-En .venv/lib64/pyicloud_ipd/services modificar archivos reminder.py y calendar.py
+---
+
+En `.venv/lib64/pyicloud_ipd/services` modificar archivos `reminder.py` y `calendar.py`
 
 *Nota: Dependiendo la versión puede ser .venv/lib o .venv/lib64*
 
@@ -41,16 +43,21 @@ local_zone = get_localzone()
         })
 ```
 
+---
+
 VLC player para reproducción de voz en Raspberry PI:
 
 ```bash
 sudo apt-get install vlc
 ```
 
+---
+
 Se requiere descargar modelo de reconocimiento de voz en español y renombrar carpeta a model, dejarlo en carpeta de proyecto.
 
 link: https://alphacephei.com/vosk/models
 
+---
 
 Adicionalmente instalar dependencias del proyecto con
 
