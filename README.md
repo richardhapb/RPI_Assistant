@@ -1,3 +1,8 @@
+Este proyecto está orientando a generar un asistente virtual para una oficina / hogar, busca ser personalizable y adicionalmente generar una sensación de control con los elementos que nos rodean a través de solo el uso de la voz para comunicarnos.
+
+
+## Dependencias
+
 Para usar pyaudio y bluepy es necesario instalar dependencias:
 
 ```bash
@@ -48,7 +53,7 @@ link: https://alphacephei.com/vosk/models
 
 El arhivo config.py tiene la siguiente estructura:
 
-## AI
+### AI
 
 NAME_AI = <nombre de asistente virtual para reconocimiento>
 KWDS_AI = [<Lista con keywords que identifica a asistente>]
@@ -58,10 +63,17 @@ KWDS_AI = [<Lista con keywords que identifica a asistente>]
 CLIENT_ID = <Client id de Spotify>
 CLIENT_SECRET = <Client secret de Spotify>
 
+
+### OpenAI
+
 OPENAI_APIKEY=<Key de api OpenAI>
+
+### iCloud
 
 ICLOUD_MAIL=<id de icloud para acceso a datos>
 ICLOUD_PASS=<password de icloud>
+
+### Weather
 
 WEATHER_API_KEY=<API KEY de [weather api](https://www.weatherapi.com)>
 
