@@ -195,7 +195,7 @@ def weather(kind='weather', fc_days=1):
     
     req = {
         "weather": "/current.json",
-        "forecast": f"/forecast.json"
+        "forecast": "/forecast.json"
     }
 
     responses = {
@@ -341,7 +341,7 @@ def greetings():
         
         speak(f"La temperatura actual es {w['temp_c']} grados celcius")
         speak(f"Se espera una mínima de {f['mintemp_c']} y una máxima de {f['maxtemp_c']} grados celcius")
-        speak(f"La probabilidad de lluvia es {f['daily_chance_of_rain'] * 100}%")
+        speak(f"La probabilidad de lluvia es {f['daily_chance_of_rain']}%")
     except KeyError:
         print("Error al obtener el clima")
     except Exception as e:
