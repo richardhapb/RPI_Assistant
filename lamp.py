@@ -7,10 +7,9 @@ def light(on:bool):
     global lamp
     try:
         if(on):
-            if not lamp:
+            if lamp:
                 lamp.on()
                 print("Relé activo")
-            lamp.on()
         else:
             if lamp:
                 lamp.off()

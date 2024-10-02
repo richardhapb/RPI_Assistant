@@ -6,7 +6,7 @@ from requests.exceptions import ReadTimeout
 
 DEFAULT_PLAYLIST = "spotify:playlist:7zH3limvqs46w9DYI5RH6x"
 
-# Autenticación con tus credenciales de Spotify
+# Autenticación
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=config.CLIENT_ID,
                                                client_secret=config.CLIENT_SECRET,
                                                redirect_uri="http://localhost:8080",
@@ -14,11 +14,11 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=config.CLIENT_ID,
 
 
 def get_device(device:str):
-    # Obtén los dispositivos disponibles
+    # Dispositivos disponibles
     devices = sp.devices()
     device_id = None
 
-    # Selecciona el dispositivo con nombre 'Raspberry Pi' o tu dispositivo preferido
+    # Selecciona dispositivo
     for dev in devices['devices']:
         if dev['name'] == device:
             device_id = dev['id']
@@ -26,10 +26,10 @@ def get_device(device:str):
     return device_id
 
 def shuffle(on=True, playlist_uri=""):
-    # Habilita la reproducción aleatoria
+    # Reproducción aleatoria
     sp.shuffle(state=on)
 
-    # Puedes comprobar el estado de reproducción actual (opcional)
+    # Ccomprobación estado de reproducción actual
     playback = sp.current_playback()
     if playback['shuffle_state']:
         print("Reproducción aleatoria activada.")
