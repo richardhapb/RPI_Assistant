@@ -35,6 +35,7 @@ REQUEST = "buen día" # Request predeterminado para desarrollo
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 MAX_AI_TIME = 10 # Tiempo que asistente está activa
+PHRASE_API = "https://frasedeldia.azurewebsites.net/api/phrase" # Frase motivadora (API)
 
 # Inicialización de PyAudio y apertura del flujo de entrada/salida
 p = pyaudio.PyAudio()
@@ -363,20 +364,10 @@ def greetings():
 
     ### Frase motivadora
     try:
-        prompt = "Dame una frase motivadora potente, que haya dicho una persona exitósa, filósofo o científico. Que sea inspiradora. Damelo en texto plano, no uses markdown."
+        phrase = requests.get(PHRASE_API).json()
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }],
-            max_tokens=MAX_TOKENS
-        )
-        res = response.choices[0].message.content
-        speak("Tengo una frase motivadora para ti")
-        print(res)
-        speak(res)
+        speak("Tengo una frase motivadora para tí")
+        speak(f"{phrase['phrase']} {phrase['author']}")
     except Exception as e:
         print("Hubo un error al obtener la frase motivadora")
 
