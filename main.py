@@ -13,6 +13,7 @@ import spotify
 from spotipy import SpotifyException
 import lamp
 import utils
+import numpy as np
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -31,7 +32,7 @@ MAX_TOKENS = 200
 PLAYER = "cvlc --play-and-exit "
 
 DEV = False # ¿Modo desarrollo?
-REQUEST = "buen día" # Request predeterminado para desarrollo
+REQUEST = "buen día " + config.NAME_AI # Request predeterminado para desarrollo
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 MAX_AI_TIME = 10 # Tiempo que asistente está activa
@@ -155,14 +156,7 @@ def speak(text):
     global ai_since, paused
     stream.stop_stream()
     playing_music = spotify.is_playing()
-    if playing_music:
-        try:
-            spotify.pause()
-            paused = True
-            time.sleep(2)
-        except SpotifyException:
-            pass
-            
+    if playing_music and not paused:
         try:
             spotify.pause()
             paused = True
@@ -179,11 +173,10 @@ def speak(text):
     stream.start_stream()
     ai_since = int(time.time())
 
-def weather(kind='weather', fc_days=1):
+def weather():
 
     '''
-    Obtiene el clima de hoy o proyectado
-    kind = weather, forecast
+    Obtiene el clima de hoy y proyectado
     '''
 
     ## lat y lon locales
@@ -191,34 +184,38 @@ def weather(kind='weather', fc_days=1):
     lon = config.LON
 
     BASE_URL = "http://api.weatherapi.com/v1"
-    PARAMS = f"?lang=es&key={config.WEATHER_API_KEY}&q={lat},{lon}"
-    PARAMS += f"&days={fc_days}" if kind == 'forecast' else ""
+    PARAMS_WEATHER = f"?lang=es&key={config.WEATHER_API_KEY}&q={lat},{lon}"
+    PARAMS_FORECAST = PARAMS_WEATHER + "&days=1"
     
     req = {
         "weather": "/current.json",
         "forecast": "/forecast.json"
     }
 
-    responses = {
-        "weather": "current",
-        "forecast": "forecast"
-    }
-
     try:
-        response = requests.get(BASE_URL + req[kind] + PARAMS).json()[responses[kind]]
-        if kind == 'forecast':
-            response = response['forecastday'][0]['day']
+        weather = requests.get(BASE_URL + req["weather"] + PARAMS_FORECAST).json()["current"]
+
+        forecast = requests.get(BASE_URL + req["forecast"] + PARAMS_FORECAST).json()["forecast"]
+        forecast_day = forecast['forecastday'][0]['day']
+        forecast_hour = forecast['forecastday'][0]['hour']
     except KeyError as e:
         print("La solicitud no fue exitosa")
         raise KeyError(e)
     except Exception as e:
         print("Error al obtener la información")
         print(e)
-        response = "error"
         raise Exception(e)
     
-    return response
+    return weather, forecast_day, forecast_hour
 
+def weather_limits(hour_forecast):
+    temp = np.empty(shape=(len(hour_forecast), 2))
+
+    for f in range(0, len(hour_forecast)):
+        temp[f] = [hour_forecast[f]['temp_c'], hour_forecast[f]['time_epoch']]
+            # Temperatura y horario temperatura mínima y máxima
+    return [[temp[np.argmin(temp, 0)[0]][0], time.strftime("%H:%M", time.localtime(temp[np.argmin(temp, 0)[0]][1]))], 
+            [temp[np.argmax(temp, 0)[0]][0], time.strftime("%H:%M", time.localtime(temp[np.argmax(temp, 0)[0]][1]))]]
 
 def manage_request(request):
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
@@ -328,8 +325,9 @@ def greetings():
 
     #### WEATHER
     try:
-        w = weather()
-        f = weather('forecast')
+        w, fd, fh = weather()
+
+        wl = weather_limits(fh)
 
         if w['temp_c'] < 16:
             speak("Hoy hace frío")
@@ -339,15 +337,18 @@ def greetings():
             speak("Hoy hace calor")
 
         speak(f"El cielo está {w['condition']['text']}")    
+
+        def is_past(hour):
+            return "fue" if int(time.strftime("%H", time.localtime(time.time()))) > int(hour[:2]) else "será"
         
         speak(f"La temperatura actual es {w['temp_c']} grados celcius")
-        speak(f"Se espera una mínima de {f['mintemp_c']} y una máxima de {f['maxtemp_c']} grados celcius")
-        speak(f"La probabilidad de lluvia es {f['daily_chance_of_rain']}%")
+        speak(f"La mínima {is_past(wl[0][1])} de {wl[0][0]} grados celcius a las {wl[0][1]} y la máxima {is_past(wl[1][1])} de {wl[1][0]} grados celcius a las {wl[1][1]}.")
+        speak(f"La probabilidad de lluvia es {fd['daily_chance_of_rain']}%")
     except KeyError:
         print("Error al obtener el clima")
     except Exception as e:
         print("Hubo en error")
-        print(e)
+        print("Error: " + e.args[0])
 
     try:
         # reminders = icloud.reminders_today()
