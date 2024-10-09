@@ -10,7 +10,7 @@ import config
 import icloud
 import requests
 import spotify
-from spotipy import SpotifyException
+from spotify import SpotifyException
 import lamp
 import utils
 import numpy as np
@@ -36,7 +36,6 @@ REQUEST = "buen día " + config.NAME_AI # Request predeterminado para desarrollo
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 MAX_AI_TIME = 10 # Tiempo que asistente está activa
-PHRASE_API = "https://frasedeldia.azurewebsites.net/api/phrase" # Frase motivadora (API)
 
 # Inicialización de PyAudio y apertura del flujo de entrada/salida
 p = pyaudio.PyAudio()
@@ -365,7 +364,7 @@ def greetings():
 
     ### Frase motivadora
     try:
-        phrase = requests.get(PHRASE_API).json()
+        phrase = utils.daily_phrase()
 
         speak("Tengo una frase motivadora para tí")
         speak(f"{phrase['phrase']} {phrase['author']}")
