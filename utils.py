@@ -115,7 +115,7 @@ def greetings():
         phrase = daily_phrase()
 
         speak("Tengo una frase motivadora para tí")
-        speak(f"{phrase['phrase']} {phrase['author']}")
+        speak(phrase)
     except Exception as e:
         print("Hubo un error al obtener la frase motivadora")
 
