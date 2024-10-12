@@ -426,11 +426,12 @@ def music(request):
             speak("listo")
             stopped = True
             paused = False
+            response = "listo"
         elif isin(request, ["reanuda", "continúa", "play"]):
             spotify.resume()
-            speak("listo")
             stopped = False
             paused = False
+            response = "listo"
         else:
             if isin(request, ["viajar"]):
                 spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
@@ -442,6 +443,7 @@ def music(request):
                 spotify.playlist()
             stopped = False
             paused = False
+            response = "listo"
     except SpotifyException:
         response = "Hay un problema con Spotify"
     except ValueError as e:
