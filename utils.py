@@ -413,11 +413,13 @@ def manage_request(request):
         ai = True
 
     
-    if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
-        try:
+    try:
+        if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
             spotify.resume()
-        except SpotifyException:
-            pass
+    except ConnectionError:
+        print("No fue posible conectarse a Spotify")
+    except SpotifyException:
+        print("Spotify no disponible")
 
     if ai:
         if request in KWRDS["greetings"]:
