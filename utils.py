@@ -31,6 +31,7 @@ kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un c
 kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 kwrds_daily_phrase = ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"]
+kwrds_weather_info = ['clima', 'temperatura']
 
 
 RATE = 16000 # Ratio de captación pyaudio
@@ -60,16 +61,14 @@ KWRDS = {
     "chatgpt": kwrds_chatgpt,
     "lamp_on": kwrds_lamp_on,
     "lamp_off": kwrds_lamp_off,
-    "daily_phrase": kwrds_daily_phrase
+    "daily_phrase": kwrds_daily_phrase,
+    "weather_info": kwrds_weather_info
 }
 
 
 # Funciones de acción
 
-def greetings():
-    '''Da los buenos días e información relevante'''
-    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
-
+def weather_info():
     #### WEATHER
     try:
         w, fd, fh = weather()
@@ -96,6 +95,12 @@ def greetings():
     except Exception as e:
         print("Hubo en error")
         print("Error: " + e.args[0])
+
+def greetings():
+    '''Da los buenos días e información relevante'''
+    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
+
+    weather_info()
 
     try:
         # reminders = icloud.reminders_today()
@@ -430,6 +435,8 @@ def manage_request(request):
     if ai:
         if isin(request, KWRDS["greetings"]):
             response = FUNCTIONS["greetings"]()
+        elif isin(request, KWRDS["weather_info"]):
+            weather_info()
         elif isin(request, kwrds_chatgpt):
             prompt = ""
             speak(f"Si {config.NAME_USER}, dime que necesitas")
@@ -497,6 +504,6 @@ def manage_request(request):
                 speak(str(e))
         elif name_ai:
             response = f"¿Si {config.NAME_USER}?"
-        elif request == "adiós " + name_ai:
+        elif request == "adiós " + config.NAME_AI[0]:
             response = "exit"
     return response
