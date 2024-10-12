@@ -185,14 +185,16 @@ def listen(max_listening_time=5):
 
 def speak(text):
     '''Habla el texto ingresado'''
-    global ai_since, paused
+    global ai_since, paused, stopped
     stream.stop_stream()
-    playing_music = spotify.is_playing()
-    if playing_music and not paused:
+    
+    if not stopped: # No verifica siempre, porque verificar tarda
+        playing_music = spotify.is_playing()
         try:
-            spotify.pause()
-            paused = True
-            time.sleep(2)
+            if playing_music and not paused and not stopped:
+                    spotify.pause()
+                    paused = True
+                    time.sleep(2)
         except SpotifyException:
             pass
             
@@ -460,21 +462,23 @@ def manage_request(request):
     global ai_active, ai_since, paused, stopped
 
     response = ""
+        
+    try:
+        if int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped: 
+            # No verifica siempre si está reproduciendo, porque verificar tarda
+            if spotify.is_playing():
+                spotify.resume()
+                paused = False
+                stopped = False
+    except ConnectionError:
+        print("No fue posible conectarse a Spotify")
+    except SpotifyException:
+        print("Spotify no disponible")
 
     ai_active = isin(request, KWRDS["ai"])
 
     if not ai_active and int(time.time()) - ai_since > MAX_AI_TIME:
         return response
-        
-    try:
-        if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
-            spotify.resume()
-            paused = False
-            stopped = False
-    except ConnectionError:
-        print("No fue posible conectarse a Spotify")
-    except SpotifyException:
-        print("Spotify no disponible")
 
     if ai:
         if request == "adiós " + config.NAME_AI[0]:
