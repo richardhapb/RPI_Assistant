@@ -392,17 +392,23 @@ def weather_limits(hour_forecast):
             [temp[np.argmax(temp, 0)[0]][0], time.strftime("%H:%M", time.localtime(temp[np.argmax(temp, 0)[0]][1]))]]
 
 
+def isin(request:str, keywords:list):
+    '''Verifica si el request contiene las keywords'''
+    theris = False
+    for k in keywords:
+        theris = k in request
+        if theris:
+            break
+    
+    return theris
+
 def manage_request(request):
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
     global want_validate_icloud, ai, ai_since, paused, stopped
 
     response = ""
 
-    name_ai = False
-
-    for n in config.KWDS_AI:
-        if n in request:
-            name_ai = True
+    name_ai = isin(request, config.KWDS_AI)
 
     if ai_since == 0 and not name_ai:
         return response
@@ -422,9 +428,9 @@ def manage_request(request):
         print("Spotify no disponible")
 
     if ai:
-        if request in KWRDS["greetings"]:
+        if isin(request, KWRDS["greetings"]):
             response = FUNCTIONS["greetings"]()
-        elif request in kwrds_chatgpt:
+        elif isin(request, kwrds_chatgpt):
             prompt = ""
             speak(f"Si {config.NAME_USER}, dime que necesitas")
             while True:
@@ -438,26 +444,26 @@ def manage_request(request):
                 print(gpt)
                 speak(gpt)
 
-        elif request in kwrds_chatgpt_data:
+        elif isin(request, kwrds_chatgpt_data):
             response = FUNCTIONS["chatgpt_data"]()
-        elif request in kwrds_lamp_on:
+        elif isin(request, kwrds_lamp_on):
             FUNCTIONS["lamp_on"](True)
             response = "Lámpara encendida"
-        elif request in kwrds_lamp_off:
+        elif isin(request, kwrds_lamp_off):
             FUNCTIONS["lamp_on"](False)
             response = "Lámpara apagada"
-        elif request in kwrds_daily_phrase:
+        elif isin(request, kwrds_daily_phrase):
             response = daily_phrase()
-        elif "icloud" in request or "cloud" in request or "club" in request or "clavo" in request:
+        elif isin(request, ["icloud", "cloud", "club", "clavo"]):
             if icloud.validated:
                 speak(f"Si {config.NAME_USER}, se encuentra validado el acceso a iCloud")
             else:
                 speak(f"No {config.NAME_USER}, no se encuentra validado el acceso a iCloud")
                 want_validate_icloud = True
             validate_icloud()
-        elif "música" in  request:
+        elif isin(request, ["música"]):
             try:
-                if "detén" in request or "pausa" in request:
+                if isin(request, ["pausa", "detén"]):
                     try:
                         spotify.pause()
                         speak("listo")
@@ -465,7 +471,7 @@ def manage_request(request):
                         paused = False
                     except SpotifyException:
                         response = "Hubo un problema con Spotify"
-                elif "reanuda" in request or "continúa" in request or "play" in request:
+                elif isin(request, ["reanuda", "continúa", "play"]):
                     try:
                         spotify.resume()
                         speak("listo")
@@ -491,6 +497,6 @@ def manage_request(request):
                 speak(str(e))
         elif name_ai:
             response = f"¿Si {config.NAME_USER}?"
-        elif request == "adiós " and name_ai:
+        elif request == "adiós " + name_ai:
             response = "exit"
     return response
