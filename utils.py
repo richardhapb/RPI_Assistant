@@ -445,6 +445,7 @@ def manage_request(request):
             weather_info()
         elif isin(request, KWRDS["calendar_info"]):
             calendar_info()
+            response = "Éxito en tu día"
         elif isin(request, kwrds_chatgpt):
             prompt = ""
             speak(f"Si {config.NAME_USER}, dime que necesitas")
