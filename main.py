@@ -43,8 +43,8 @@ def main():
         print("Done.")
         utils.stream.stop_stream()
         utils.stream.close()
-        utils.music.stop_stream()
-        utils.music.close()
+        utils.music_stream.stop_stream()
+        utils.music_stream.close()
         lamp.close()
         utils.p.terminate()
 

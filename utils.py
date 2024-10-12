@@ -33,8 +33,19 @@ KWRDS = {
     "lamp_off": ['apaga la luz', 'quita la luz', 'apaga la luz por favor'],
     "daily_phrase": ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"],
     "weather_info": ['clima', 'temperatura'],
-    "calendar_info": ['calendario', 'agenda', "organizado", "eventos"]
+    "calendar_info": ['calendario', 'agenda', "organizado", "eventos"],
+    "icloud_is_validated": ["icloud", "cloud", "club", "clavo"],
+    "music": ["música"],
+    "ai": config.KWDS_AI
 }
+
+## GLOBALS
+
+want_validate_icloud = False # ¿Usuario quiere validar icloud en caso de no estarlo?
+ai = False # ¿Asistente activa?
+ai_since = 0 # ¿Desde cuándo está activa?
+paused = False # ¿Música pausada para hablar?
+stopped = True # ¿Música totalmente detenida?
 
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
@@ -49,150 +60,13 @@ stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frame
 stream.start_stream()
 
 # Música
-music = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
-music.start_stream()
+music_stream = p.open(format=pyaudio.paInt16, channels=2, rate=RATE, output=True)
+music_stream.start_stream()
 
 # Módelo para reconocmiento de voz
 if not os.path.exists("model"):
     print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
     sys.exit(1)
-
-
-# Funciones de acción
-
-def weather_info():
-    #### WEATHER
-    try:
-        w, fd, fh = weather()
-
-        wl = weather_limits(fh)
-
-        if w['temp_c'] < 16:
-            speak("Hoy hace frío")
-        elif w['temp_c'] < 20:
-            speak("Está un poco frío, pero no mucho para ti")
-        else:
-            speak("Hoy hace calor")
-
-        speak(f"El cielo está {w['condition']['text']}")    
-
-        def is_past(hour):
-            return "fue" if int(time.strftime("%H", time.localtime(time.time()))) > int(hour[:2]) else "será"
-        
-        speak(f"La temperatura actual es {w['temp_c']} grados celcius")
-        speak(f"La mínima {is_past(wl[0][1])} de {wl[0][0]} grados celcius a las {wl[0][1]} y la máxima {is_past(wl[1][1])} de {wl[1][0]} grados celcius a las {wl[1][1]}.")
-        speak(f"La probabilidad de lluvia es {fd['daily_chance_of_rain']}%")
-    except KeyError:
-        print("Error al obtener el clima")
-    except Exception as e:
-        print("Hubo en error")
-        print("Error: " + e.args[0])
-
-def calendar_info():
-    try:
-        # reminders = icloud.reminders_today()
-        events = icloud.calendar_today()
-
-        if events:
-            speak("Estos son tus eventos para hoy: ")
-            for e in events:
-                speak(e)
-        else:
-            speak("No tienes eventos agendados para hoy")
-    except ConnectionError:
-        print("Hubo un error al obtener los datos de iCloud")
-
-def greetings():
-    '''Da los buenos días e información relevante'''
-    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
-
-    weather_info()
-
-    calendar_info()
-
-    ### Frase motivadora
-    try:
-        phrase = daily_phrase()
-
-        speak("Tengo una frase motivadora para tí")
-        speak(phrase)
-    except Exception as e:
-        print("Hubo un error al obtener la frase motivadora")
-
-    return "¡Que tengas un excelente día!"
-
-def chatgpt(prompt):
-    '''Inicia un chat con API de OpenAI'''
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": f"Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es {config.NAME_AI}, mi nombre es {config.NAME_USER}."},
-            {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
-        ],
-        max_tokens=MAX_TOKENS,
-        temperature=0.7
-    )
-
-    res = response.choices[0].message.content
-    print(res)
-    return res
-
-def chatgpt_data():
-    '''Obtiene un dato puntual de Chat GPT a través de la api'''
-    prompt = ""
-
-    speak("¿En qué te puedo ayudar?")
-
-    # Escuchar por 10 segundos
-    prompt = listen(10)
-
-    print(f"prompt: {prompt}")
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{
-            "role": "user",
-            "content": prompt
-        }],
-        max_tokens=MAX_TOKENS,
-        format="text"
-    )
-    res = response.choices[0].message.content
-    print(res)
-    return res
-
-def light(on=True):
-    '''Enciende/apaga la luz (conectada a RPI)'''
-    res = ""
-    if on:
-        lamp.light(on)
-        res = "Listo"
-    else:
-        lamp.light(on)
-        res = "Listo"
-    return res
-
-            
-def daily_phrase():
-    try:
-        url = PHRASE_API
-        response = requests.get(url, verify=False)
-        soup = BeautifulSoup(response.text, "lxml")
-        phrase = soup.blockquote.text
-        phrase = phrase[0 : phrase.find("(")]
-    except Exception as e:
-        print("Hubo un error", e)
-        phrase = "Hubo un error al obtener la frase"
-
-
-    return phrase
-
-def lamp_on():
-    lamp.light(True)
-
-def lamp_off():
-    lamp.light(False)
-
-FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
 
 ##################### UTILS
 
@@ -220,18 +94,6 @@ def text_to_number(text:str):
     
 
     return numbers_str
-
-def in_request(request:str):
-    if config.NAME_AI in request:
-        rq1, rq2 = request.split(config.NAME_AI)
-
-## GLOBALS
-
-want_validate_icloud = False # ¿Usuario quiere validar icloud en caso de no estarlo?
-ai = False # ¿Asistente activa?
-ai_since = 0 # ¿Desde cuándo está activa?
-paused = False # ¿Música pausada para hablar?
-stopped = True # ¿Música totalmente detenida?
 
 ### ICLOUD
 def initicloud():
@@ -388,6 +250,22 @@ def weather_limits(hour_forecast):
     return [[temp[np.argmin(temp, 0)[0]][0], time.strftime("%H:%M", time.localtime(temp[np.argmin(temp, 0)[0]][1]))], 
             [temp[np.argmax(temp, 0)[0]][0], time.strftime("%H:%M", time.localtime(temp[np.argmax(temp, 0)[0]][1]))]]
 
+def chatgpt_chat(prompt):
+    '''Inicia un chat con API de OpenAI'''
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es {config.NAME_AI}, mi nombre es {config.NAME_USER}."},
+            {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
+        ],
+        max_tokens=MAX_TOKENS,
+        temperature=0.7
+    )
+
+    res = response.choices[0].message.content
+    print(res)
+    return res
+
 
 def isin(request:str, keywords:list):
     '''Verifica si el request contiene las keywords'''
@@ -399,9 +277,188 @@ def isin(request:str, keywords:list):
     
     return theris
 
+# Funciones de acción
+
+def weather_info():
+    response = ""
+    #### WEATHER
+    try:
+        w, fd, fh = weather()
+
+        wl = weather_limits(fh)
+
+        if w['temp_c'] < 16:
+            speak("Hoy hace frío")
+        elif w['temp_c'] < 20:
+            speak("Está un poco frío, pero no mucho para ti")
+        else:
+            speak("Hoy hace calor")
+
+        speak(f"El cielo está {w['condition']['text']}")    
+
+        def is_past(hour):
+            return "fue" if int(time.strftime("%H", time.localtime(time.time()))) > int(hour[:2]) else "será"
+        
+        speak(f"La temperatura actual es {w['temp_c']} grados celcius")
+        speak(f"La mínima {is_past(wl[0][1])} de {wl[0][0]} grados celcius a las {wl[0][1]} y la máxima {is_past(wl[1][1])} de {wl[1][0]} grados celcius a las {wl[1][1]}.")
+        speak(f"La probabilidad de lluvia es {fd['daily_chance_of_rain']}%")
+    except KeyError:
+        print("Error al obtener el clima")
+        response = "Hubo un problema al obtener la frase del día"
+    except Exception as e:
+        print("Hubo en error")
+        print("Error: " + e.args[0])
+        response = "Hubo un problema al obtener la frase del día"
+    return response
+
+def calendar_info():
+    try:
+        # reminders = icloud.reminders_today()
+        events = icloud.calendar_today()
+
+        if events:
+            speak("Estos son tus eventos para hoy: ")
+            for e in events:
+                speak(e)
+        else:
+            speak("No tienes eventos agendados para hoy")
+    except ConnectionError:
+        return "Hubo un error al obtener los datos de iCloud"
+    
+    return "Éxito en tu día"
+
+def greetings():
+    '''Da los buenos días e información relevante'''
+    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
+
+    weather_info()
+
+    calendar_info()
+
+    ### Frase motivadora
+    try:
+        phrase = daily_phrase()
+
+        speak("Tengo una frase motivadora para tí")
+        speak(phrase)
+    except Exception as e:
+        print("Hubo un error al obtener la frase motivadora")
+
+    return "¡Que tengas un excelente día!"
+
+def chatgpt():
+    prompt = ""
+    speak(f"Si {config.NAME_USER}, dime que necesitas")
+    while True:
+        prompt = listen(10)
+        print(listen)
+        exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
+        if prompt in exit:
+            speak(f"De nada {config.NAME_USER}, avísame si necesitas algo más")
+            break
+        gpt = chatgpt_chat(prompt)
+        print(gpt)
+        speak(gpt)
+    return ""
+
+def chatgpt_data():
+    '''Obtiene un dato puntual de Chat GPT a través de la api'''
+    prompt = ""
+
+    speak("¿En qué te puedo ayudar?")
+
+    # Escuchar por 10 segundos
+    prompt = listen(10)
+
+    print(f"prompt: {prompt}")
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": prompt
+        }],
+        max_tokens=MAX_TOKENS,
+        format="text"
+    )
+    res = response.choices[0].message.content
+    print(res)
+    return res
+
+def daily_phrase():
+    try:
+        url = PHRASE_API
+        response = requests.get(url, verify=False)
+        soup = BeautifulSoup(response.text, "lxml")
+        phrase = soup.blockquote.text
+        phrase = phrase[0 : phrase.find("(")]
+    except Exception as e:
+        print("Hubo un error", e)
+        phrase = "Hubo un error al obtener la frase"
+
+
+    return phrase
+
+def lamp_on():
+    lamp.light(True)
+    return "Lámpara encendida"
+
+def lamp_off():
+    lamp.light(False)
+    return "Lámpara apagada"
+
+def icloud_is_validated():
+    global want_validate_icloud
+    if icloud.validated:
+        speak(f"Si {config.NAME_USER}, se encuentra validado el acceso a iCloud")
+    else:
+        speak(f"No {config.NAME_USER}, no se encuentra validado el acceso a iCloud")
+        want_validate_icloud = True
+    validate_icloud()
+    return ""
+
+def music(request):
+    global paused, stopped
+    response = ""
+    try:
+        if isin(request, ["pausa", "detén"]):
+            spotify.pause()
+            speak("listo")
+            stopped = True
+            paused = False
+        elif isin(request, ["reanuda", "continúa", "play"]):
+            spotify.resume()
+            speak("listo")
+            stopped = False
+            paused = False
+        else:
+            if isin(request, ["viajar"]):
+                spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
+            elif isin(request, ["estudiar"]):
+                spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
+            elif isin(request, ["relajarme", "tranquila"]):
+                spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
+            else:
+                spotify.playlist()
+            stopped = False
+            paused = False
+    except SpotifyException:
+        response = "Hay un problema con Spotify"
+    except ValueError as e:
+        print(e)
+        response = "Hay un problema con Spotify"
+    
+    return response
+
+def ai():
+    return f"¿Si {config.NAME_USER}?"
+
+##########
+
+FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
+
 def manage_request(request):
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
-    global want_validate_icloud, ai, ai_since, paused, stopped
+    global ai, ai_since, paused, stopped
 
     response = ""
 
@@ -419,86 +476,22 @@ def manage_request(request):
     try:
         if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
             spotify.resume()
+            paused = False
+            stopped = False
     except ConnectionError:
         print("No fue posible conectarse a Spotify")
     except SpotifyException:
         print("Spotify no disponible")
 
     if ai:
-        if isin(request, KWRDS["greetings"]):
-            response = FUNCTIONS["greetings"]()
-        elif isin(request, KWRDS["weather_info"]):
-            FUNCTIONS["weather_info"]()
-        elif isin(request, KWRDS["calendar_info"]):
-            calendar_info()
-            response = "Éxito en tu día"
-        elif isin(request, KWRDS["chatgpt"]):
-            prompt = ""
-            speak(f"Si {config.NAME_USER}, dime que necesitas")
-            while True:
-                prompt = listen(10)
-                print(listen)
-                exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
-                if prompt in exit:
-                    speak(f"De nada {config.NAME_USER}, avísame si necesitas algo más")
-                    break
-                gpt = FUNCTIONS["chatgpt"](prompt)
-                print(gpt)
-                speak(gpt)
-
-        elif isin(request, KWRDS["chatgpt_data"]):
-            response = FUNCTIONS["chatgpt_data"]()
-        elif isin(request, KWRDS["lamp_on"]):
-            FUNCTIONS["lamp_on"]
-            response = "Lámpara encendida"
-        elif isin(request, KWRDS["lamp_off"]):
-            FUNCTIONS["lamp_off"]
-            response = "Lámpara apagada"
-        elif isin(request, KWRDS["daily_phrase"]):
-            response = daily_phrase()
-        elif isin(request, ["icloud", "cloud", "club", "clavo"]):
-            if icloud.validated:
-                speak(f"Si {config.NAME_USER}, se encuentra validado el acceso a iCloud")
-            else:
-                speak(f"No {config.NAME_USER}, no se encuentra validado el acceso a iCloud")
-                want_validate_icloud = True
-            validate_icloud()
-        elif isin(request, ["música"]):
-            try:
-                if isin(request, ["pausa", "detén"]):
-                    try:
-                        spotify.pause()
-                        speak("listo")
-                        stopped = True
-                        paused = False
-                    except SpotifyException:
-                        response = "Hubo un problema con Spotify"
-                elif isin(request, ["reanuda", "continúa", "play"]):
-                    try:
-                        spotify.resume()
-                        speak("listo")
-                        stopped = False
-                        paused = False
-                    except SpotifyException:
-                        response = "Hubo un problema con Spotify"
-                else:
-                    last_word = request.split(" ")[-1]
-                    if last_word == "música":
-                        spotify.playlist()
-                    elif last_word == "viajar":
-                        spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
-                    elif last_word == "estudiar":
-                        spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p")
-                    elif last_word == "relajarme":
-                        spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
-                    stopped = False
-            except SpotifyException:
-                speak("Hay un problema con Spotify")
-            except ValueError as e:
-                print(e)
-                speak(str(e))
-        elif name_ai:
-            response = f"¿Si {config.NAME_USER}?"
-        elif request == "adiós " + config.NAME_AI[0]:
+        if request == "adiós " + config.NAME_AI[0]:
             response = "exit"
+        else:
+            for k in KWRDS.keys():
+                if isin(request, KWRDS[k]):
+                    if k == "music":
+                        response = FUNCTIONS[k](request)
+                    else:
+                        response = FUNCTIONS[k]()
+                    break
     return response
