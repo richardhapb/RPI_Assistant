@@ -25,16 +25,16 @@ urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
 PHRASE_API = "http://proverbia.net"  # Frase motivadora (API))
 
-kwrds_greetings = ["buen día", "buen día " + config.NAME_AI, "muy buenos días", "buenos días"]
-kwrds_chatgpt_data = ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo']
-kwrds_chatgpt = ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat']
-kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor']
-kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
-kwrds_daily_phrase = ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"]
-kwrds_weather_info = ['clima', 'temperatura']
-kwrds_calendar_info = ['calendario', 'agenda', "organizado", "eventos"]
-
-
+KWRDS = {
+    "greetings": ["buen día", "buen día " + config.NAME_AI, "muy buenos días", "buenos días"],
+    "chatgpt_data": ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo'],
+    "chatgpt": ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat'],
+    "lamp_on": ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor'],
+    "lamp_off": ['apaga la luz', 'quita la luz', 'apaga la luz por favor'],
+    "daily_phrase": ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"],
+    "weather_info": ['clima', 'temperatura'],
+    "calendar_info": ['calendario', 'agenda', "organizado", "eventos"]
+}
 
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
@@ -56,17 +56,6 @@ music.start_stream()
 if not os.path.exists("model"):
     print("Please download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder.")
     sys.exit(1)
-
-KWRDS = {
-    "greetings": kwrds_greetings,
-    "chatgpt_data": kwrds_chatgpt_data,
-    "chatgpt": kwrds_chatgpt,
-    "lamp_on": kwrds_lamp_on,
-    "lamp_off": kwrds_lamp_off,
-    "daily_phrase": kwrds_daily_phrase,
-    "weather_info": kwrds_weather_info,
-    "calendar_info": kwrds_calendar_info
-}
 
 
 # Funciones de acción
@@ -197,16 +186,13 @@ def daily_phrase():
 
     return phrase
 
-FUNCTIONS = {
-    "greetings": greetings,
-    "chatgpt_data": chatgpt_data,
-    "chatgpt": chatgpt,
-    "lamp_on": lamp.light,
-    "lamp_off": lamp.light,
-    "daily_phrase": daily_phrase
-}
+def lamp_on():
+    lamp.light(True)
 
+def lamp_off():
+    lamp.light(False)
 
+FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
 
 ##################### UTILS
 
@@ -442,11 +428,11 @@ def manage_request(request):
         if isin(request, KWRDS["greetings"]):
             response = FUNCTIONS["greetings"]()
         elif isin(request, KWRDS["weather_info"]):
-            weather_info()
+            FUNCTIONS["weather_info"]()
         elif isin(request, KWRDS["calendar_info"]):
             calendar_info()
             response = "Éxito en tu día"
-        elif isin(request, kwrds_chatgpt):
+        elif isin(request, KWRDS["chatgpt"]):
             prompt = ""
             speak(f"Si {config.NAME_USER}, dime que necesitas")
             while True:
@@ -460,15 +446,15 @@ def manage_request(request):
                 print(gpt)
                 speak(gpt)
 
-        elif isin(request, kwrds_chatgpt_data):
+        elif isin(request, KWRDS["chatgpt_data"]):
             response = FUNCTIONS["chatgpt_data"]()
-        elif isin(request, kwrds_lamp_on):
-            FUNCTIONS["lamp_on"](True)
+        elif isin(request, KWRDS["lamp_on"]):
+            FUNCTIONS["lamp_on"]
             response = "Lámpara encendida"
-        elif isin(request, kwrds_lamp_off):
-            FUNCTIONS["lamp_on"](False)
+        elif isin(request, KWRDS["lamp_off"]):
+            FUNCTIONS["lamp_off"]
             response = "Lámpara apagada"
-        elif isin(request, kwrds_daily_phrase):
+        elif isin(request, KWRDS["daily_phrase"]):
             response = daily_phrase()
         elif isin(request, ["icloud", "cloud", "club", "clavo"]):
             if icloud.validated:
