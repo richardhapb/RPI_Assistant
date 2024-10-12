@@ -32,7 +32,7 @@ kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende 
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 kwrds_daily_phrase = ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"]
 kwrds_weather_info = ['clima', 'temperatura']
-kwrds_calendar_info = ['calendario', 'agenda', "organizado"]
+kwrds_calendar_info = ['calendario', 'agenda', "organizado", "eventos"]
 
 
 
