@@ -50,7 +50,7 @@ stopped = True # ¿Música totalmente detenida?
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
 PLAYER = "cvlc --play-and-exit "
-MAX_AI_TIME = 10 # Tiempo que asistente está activa
+MAX_AI_TIME = 10 # Tiempo que asistente está activa en segundos
 
 # Inicialización de PyAudio y apertura del flujo de entrada/salida
 p = pyaudio.PyAudio()
@@ -185,7 +185,6 @@ def listen(max_listening_time=5):
 
 def speak(text):
     '''Habla el texto ingresado'''
-    global ai_since, paused
     global ai_since, paused
     stream.stop_stream()
     playing_music = spotify.is_playing()
@@ -458,21 +457,15 @@ FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
 
 def manage_request(request):
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
-    global ai, ai_since, paused, stopped
+    global ai_active, ai_since, paused, stopped
 
     response = ""
 
-    name_ai = isin(request, config.KWDS_AI)
+    ai_active = isin(request, KWRDS["ai"])
 
-    if ai_since == 0 and not name_ai:
+    if not ai_active and int(time.time()) - ai_since > MAX_AI_TIME:
         return response
-    elif name_ai:
-        if int(time.time()) - ai_since > MAX_AI_TIME:
-            ai = True
-    elif int(time.time()) - ai_since <= MAX_AI_TIME:
-        ai = True
-
-    
+        
     try:
         if spotify.is_playing() and int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped:
             spotify.resume()

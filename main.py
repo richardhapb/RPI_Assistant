@@ -9,7 +9,7 @@ REQUEST = "buen día " + config.NAME_AI # Request predeterminado para desarrollo
 
 def main():
     '''Función principal de captación de voz'''
-    global ai_since, ai
+    global ai_since, ai_active
     utils.initicloud()
     response = ""
     try:
@@ -31,12 +31,12 @@ def main():
                 utils.speak(f"adiós {config.NAME_USER}")
                 break
             elif response == "":
-                ai = False
+                ai_active = False
                 continue
 
             print(response)
             utils.speak(response)
-            ai = False
+            ai_active = False
     except KeyboardInterrupt:
         pass
     finally:
