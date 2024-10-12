@@ -23,7 +23,7 @@ MAX_TOKENS = 200
 
 urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
-PHRASE_API = "http://proverbia.net"  # Frase motivadora (API))
+PHRASE_API = "http://proverbia.net"  # Frase del día (link para extracción)
 
 KWRDS = {
     "greetings": ["buen día", "buen día " + config.NAME_AI, "muy buenos días", "buenos días"],
@@ -42,7 +42,7 @@ KWRDS = {
 ## GLOBALS
 
 want_validate_icloud = False # ¿Usuario quiere validar icloud en caso de no estarlo?
-ai = False # ¿Asistente activa?
+ai_active = False # ¿Asistente activa?
 ai_since = 0 # ¿Desde cuándo está activa?
 paused = False # ¿Música pausada para hablar?
 stopped = True # ¿Música totalmente detenida?
