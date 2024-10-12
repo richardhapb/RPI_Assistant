@@ -32,6 +32,8 @@ kwrds_lamp_on = ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende 
 kwrds_lamp_off = ['apaga la luz', 'quita la luz', 'apaga la luz por favor']
 kwrds_daily_phrase = ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"]
 kwrds_weather_info = ['clima', 'temperatura']
+kwrds_calendar_info = ['calendario', 'agenda', "organizado"]
+
 
 
 RATE = 16000 # Ratio de captación pyaudio
@@ -62,7 +64,8 @@ KWRDS = {
     "lamp_on": kwrds_lamp_on,
     "lamp_off": kwrds_lamp_off,
     "daily_phrase": kwrds_daily_phrase,
-    "weather_info": kwrds_weather_info
+    "weather_info": kwrds_weather_info,
+    "calendar_info": kwrds_calendar_info
 }
 
 
@@ -96,12 +99,7 @@ def weather_info():
         print("Hubo en error")
         print("Error: " + e.args[0])
 
-def greetings():
-    '''Da los buenos días e información relevante'''
-    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
-
-    weather_info()
-
+def calendar_info():
     try:
         # reminders = icloud.reminders_today()
         events = icloud.calendar_today()
@@ -114,6 +112,14 @@ def greetings():
             speak("No tienes eventos agendados para hoy")
     except ConnectionError:
         print("Hubo un error al obtener los datos de iCloud")
+
+def greetings():
+    '''Da los buenos días e información relevante'''
+    speak(f"Hola {config.NAME_USER}, muy buenos días, ¡espero estés excelente!")
+
+    weather_info()
+
+    calendar_info()
 
     ### Frase motivadora
     try:
@@ -437,6 +443,8 @@ def manage_request(request):
             response = FUNCTIONS["greetings"]()
         elif isin(request, KWRDS["weather_info"]):
             weather_info()
+        elif isin(request, KWRDS["calendar_info"]):
+            calendar_info()
         elif isin(request, kwrds_chatgpt):
             prompt = ""
             speak(f"Si {config.NAME_USER}, dime que necesitas")
