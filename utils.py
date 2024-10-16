@@ -189,14 +189,17 @@ def speak(text):
     stream.stop_stream()
     
     if not stopped: # No verifica siempre, porque verificar tarda
-        playing_music = spotify.is_playing()
         try:
+            playing_music = spotify.is_playing()
             if playing_music and not paused and not stopped:
                     spotify.pause()
                     paused = True
                     time.sleep(2)
+        except ConnectionError:
+            print("No fue posible conectarse a Spotify")
         except SpotifyException:
-            pass
+            print("Spotify no disponible")
+
             
     tts = gTTS(text, lang="es", tld="com.mx")
     tts.save("response.mp3")
