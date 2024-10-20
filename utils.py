@@ -353,17 +353,24 @@ def greetings():
 def chatgpt():
     prompt = ""
     speak(f"Si {config.NAME_USER}, dime que necesitas")
-    while True:
-        prompt = listen(10)
-        print(listen)
-        exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
-        if prompt in exit:
-            speak(f"De nada {config.NAME_USER}, avísame si necesitas algo más")
-            break
-        gpt = chatgpt_chat(prompt)
-        print(gpt)
-        speak(gpt)
-    return ""
+
+    res = ""
+
+    try:
+        while True:
+            prompt = listen(10)
+            print(listen)
+            exit = ["gracias", "nada más", "estamos ok", "estamos listos", "con eso estamos"]
+            if prompt in exit:
+                speak(f"De nada {config.NAME_USER}, avísame si necesitas algo más")
+                break
+            gpt = chatgpt_chat(prompt)
+            print(gpt)
+            speak(gpt)
+    except:
+        res = "Hubo un error en el chat"
+
+    return res
 
 def chatgpt_data():
     '''Obtiene un dato puntual de Chat GPT a través de la api'''
@@ -375,16 +382,18 @@ def chatgpt_data():
     prompt = listen(10)
 
     print(f"prompt: {prompt}")
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{
-            "role": "user",
-            "content": prompt
-        }],
-        max_tokens=MAX_TOKENS,
-        format="text"
-    )
-    res = response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "user",
+                "content": prompt + " usa formato de texto plano, no uses markdown"
+            }],
+            max_tokens=MAX_TOKENS
+        )
+        res = response.choices[0].message.content
+    except Exception:
+        res = "Hubo un error con la consulta"
     print(res)
     return res
 
