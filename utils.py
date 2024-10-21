@@ -45,7 +45,7 @@ KWRDS = {
     "music": ["música"],
     "ai": config.KWDS_AI,
     "alarm": ["alarma", "despertar", "despertarme", "alarmas", "despertar alarma", "despertar alarmas", "despiertame"],
-    "date_now": ["fecha actual", "fecha de hoy", "fecha es hoy", "fecha estamos"],
+    "date_now": ["fecha actual", "fecha de hoy", "fecha es hoy", "fecha estamos", "qué día es hoy"],
     "time_now": ["dime la hora", "qué hora es"]
 }
 
