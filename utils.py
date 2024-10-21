@@ -492,7 +492,6 @@ def music(request):
     try:
         if isin(request, ["pausa", "detén"]):
             spotify.pause()
-            speak("listo")
             stopped = True
             paused = False
             response = "listo"
