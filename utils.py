@@ -357,7 +357,6 @@ def chatgpt_chat(prompt):
             {"role": "system", "content": f"Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es {config.NAME_AI}, mi nombre es {config.NAME_USER}."},
             {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
         ],
-        max_tokens=MAX_TOKENS,
         temperature=0.7
     )
 
@@ -484,10 +483,10 @@ def chatgpt_data():
             messages=[{
                 "role": "user",
                 "content": prompt + " usa formato de texto plano, no uses markdown"
-            }],
-            max_tokens=MAX_TOKENS
+            }]
         )
         res = response.choices[0].message.content
+        res = res.replace("*", "")
     except Exception:
         res = "Hubo un error con la consulta"
     print(res)
