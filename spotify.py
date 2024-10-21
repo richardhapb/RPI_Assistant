@@ -31,14 +31,7 @@ def shuffle(on=True, playlist_uri="", device=""):
     sp.shuffle(state=on)
 
     try:
-        # Ccomprobación estado de reproducción actual
-        playback = sp.current_playback()
-        if playback['shuffle_state']:
-            print("Reproducción aleatoria activada.")
-        else:
-            print("Reproducción aleatoria desactivada.")
-
-            # Obtener todas las canciones de la lista de reproducción
+        # Obtener todas las canciones de la lista de reproducción
 
         if playlist_uri:
             playlist_tracks = sp.playlist_tracks(playlist_id=playlist_uri, fields='items.track.uri')
@@ -61,10 +54,7 @@ def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=75):
     if(device):
         set_volume(volume, device)
         if random:
-            sp.start_playback(device_id=device, context_uri=playlist_uri)
             try:
-                sp.pause_playback()
-                time.sleep(2)
                 shuffle(True, playlist_uri, device=device)
             except ConnectionError as e:
                 print("No hay reproducción activa")
