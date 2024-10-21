@@ -550,7 +550,6 @@ def music(request):
                 spotify.playlist()
             stopped = False
             paused = False
-            response = "listo"
     except SpotifyException:
         response = "Hay un problema con Spotify"
     except ValueError as e:
