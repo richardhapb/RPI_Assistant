@@ -3,9 +3,9 @@ from spotipy.oauth2 import SpotifyOAuth
 import config
 import random
 from requests.exceptions import ReadTimeout
-import time
 
 DEFAULT_PLAYLIST = "spotify:playlist:7zH3limvqs46w9DYI5RH6x"
+DEVICE_NAME = "Librespot"
 
 # Autenticación
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=config.CLIENT_ID,
@@ -56,7 +56,7 @@ def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=80, repeat_mode=
     playlist_uri: ID de la lista de reproducción
     random: True o False
     '''
-    device = get_device('Librespot')
+    device = get_device(DEVICE_NAME)
 
     if(device):
         set_volume(volume, device)
@@ -90,7 +90,8 @@ def resume():
 
 def is_playing():
     try:
-        playing = sp.current_playback() is not None
+        playing = sp.currently_playing()
+        playing = playing["is_playing"]
     except ReadTimeout:
         print("Hubo un problema al acceder a la información")
         playing = False
@@ -100,7 +101,7 @@ def set_volume(volume, device=None):
     if volume > 100:
         raise ValueError("El volumen no puede ser mayor a 100")
     try:
-        device_id = get_device('Librespot') if device is None else device
+        device_id = get_device(DEVICE_NAME) if device is None else device
         sp.volume(volume, device_id=device_id)
         print("Volumen establecido a " + str(volume))
     except Exception as e:

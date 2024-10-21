@@ -39,10 +39,10 @@ def test_text_to_number():
     assert int(utils.text_to_number("treinta y tres")) == 33
 
 def test_isin():
-    assert utils.isin("hola", ["hola", "adios"])
-    assert not utils.isin("adios", ["hola", "adiosin"])
-    assert utils.isin("adios", ["hola", "adios", "adios2"])
-    assert utils.isin("aquí", ["hola", "aquí"])
+    assert utils.isin("hola", ["hola", "adios"]) is True
+    assert not utils.isin("adios", ["hola", "adiosin"]) is not True
+    assert utils.isin("adios", ["hola", "adios", "adios2"]) is True
+    assert utils.isin("aquí", ["hola", "aquí"]) is True
 
 def test_weather():
     assert isinstance(utils.weather(), tuple)
