@@ -48,7 +48,7 @@ def shuffle(on=True, playlist_uri="", device=""):
     except Exception as e:
         raise ConnectionError(e)
 
-def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=75):
+def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=80):
     device = get_device('Librespot')
 
     if(device):
