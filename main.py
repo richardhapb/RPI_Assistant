@@ -5,7 +5,7 @@ import utils
 # Constantes
 
 DEV = False
-REQUEST = "buen día " + config.NAME_AI # Request predeterminado para desarrollo
+REQUEST = "Reproduce música " + config.NAME_AI # Request predeterminado para desarrollo
 
 def main():
     '''Función principal de captación de voz'''

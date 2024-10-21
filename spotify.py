@@ -3,6 +3,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import config
 import random
 from requests.exceptions import ReadTimeout
+import time
 
 DEFAULT_PLAYLIST = "spotify:playlist:7zH3limvqs46w9DYI5RH6x"
 
@@ -25,40 +26,53 @@ def get_device(device:str):
             break
     return device_id
 
-def shuffle(on=True, playlist_uri=""):
+def shuffle(on=True, playlist_uri="", device=""):
     # Reproducción aleatoria
     sp.shuffle(state=on)
 
-    # Ccomprobación estado de reproducción actual
-    playback = sp.current_playback()
-    if playback['shuffle_state']:
-        print("Reproducción aleatoria activada.")
-    else:
-        print("Reproducción aleatoria desactivada.")
+    try:
+        # Ccomprobación estado de reproducción actual
+        playback = sp.current_playback()
+        if playback['shuffle_state']:
+            print("Reproducción aleatoria activada.")
+        else:
+            print("Reproducción aleatoria desactivada.")
 
-        # Obtener todas las canciones de la lista de reproducción
+            # Obtener todas las canciones de la lista de reproducción
 
-    if playlist_uri:
-        playlist_tracks = sp.playlist_tracks(playlist_id=playlist_uri, fields='items.track.uri')
-        track_uris = [item['track']['uri'] for item in playlist_tracks['items']]
+        if playlist_uri:
+            playlist_tracks = sp.playlist_tracks(playlist_id=playlist_uri, fields='items.track.uri')
+            track_uris = [item['track']['uri'] for item in playlist_tracks['items']]
 
-        # Hacer shuffle de la lista de canciones
-        random.shuffle(track_uris)
+            # Hacer shuffle de la lista de canciones
+            random.shuffle(track_uris)
 
-        # Iniciar la reproducción de las canciones en orden aleatorio
-        sp.start_playback(uris=track_uris)
+            # Iniciar la reproducción de las canciones en orden aleatorio
+            if device != "":
+                sp.start_playback(uris=track_uris, device_id=device)
+            else:
+                sp.start_playback(uris=track_uris)
+    except Exception as e:
+        raise ConnectionError(e)
 
 def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True):
-    device = get_device('raspotify (RP1)')
+    device = get_device('Librespot')
 
     if(device):
         if random:
-            shuffle(True, playlist_uri)
+            sp.start_playback(device_id=device, context_uri=playlist_uri)
+            try:
+                sp.pause_playback()
+                time.sleep(2)
+                shuffle(True, playlist_uri, device=device)
+            except ConnectionError as e:
+                print("No hay reproducción activa")
+                print(e)
 
         else:
             # Reproduce una playlist específica
             print("Reproduciendo playlist...")
-            sp.start_playback(device_id=device, context_uri=DEFAULT_PLAYLIST)
+            sp.start_playback(device_id=device, context_uri=playlist_uri)
     else:
         print("No se encontró el dispositivo")
         raise ValueError("Lo siento, no se encontró el dispositivo de reproducción")
