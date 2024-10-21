@@ -1,11 +1,20 @@
 import config
-import lamp
 import utils
+import time
+
+RPI = True
+
+try:
+    import lamp
+except ImportError:
+    RPI = False
+    print("No se importó lampara, porque el entorno no es Raspberry PI")
+
 
 # Constantes
 
 DEV = False
-REQUEST = "Reproduce música " + config.NAME_AI # Request predeterminado para desarrollo
+REQUEST = "Pon una alarma para las cero cinco " + config.NAME_AI # Request predeterminado para desarrollo
 
 def main():
     '''Función principal de captación de voz'''
@@ -45,7 +54,7 @@ def main():
         utils.stream.close()
         utils.music_stream.stop_stream()
         utils.music_stream.close()
-        lamp.close()
+        lamp.close() if RPI else None
         utils.p.terminate()
 
 if __name__ == "__main__":

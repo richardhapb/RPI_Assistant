@@ -3,13 +3,16 @@ from pyicloud_ipd import PyiCloudService
 from pyicloud_ipd.exceptions import PyiCloudAPIResponseError, PyiCloudFailedLoginException
 import config
 
-
-icloud = PyiCloudService("","","com", None, None, config.ICLOUD_MAIL, config.ICLOUD_PASS)
-validated = False
+try:
+    icloud = PyiCloudService("","","com", None, None, config.ICLOUD_MAIL, config.ICLOUD_PASS)
+    validated = False
+except PyiCloudFailedLoginException as e:
+    print("No se pudo iniciar sesión en iCloud")
+    print(e)
 
 def init_icloud(code:str=""):
-    global icloud, validated
     try:
+        global icloud, validated
         if icloud.requires_2fa and code != "":
             result = icloud.validate_2fa_code(code)
             print("Resultado de validación del código: %s" % result)
@@ -37,7 +40,11 @@ def init_icloud(code:str=""):
     except PyiCloudFailedLoginException as e:
         print("Error al autenticar")
         print(e)
-        raise PermissionError
+        raise ConnectionError
+    except NameError as e:
+        print("No se pudo iniciar sesión en iCloud")
+        print(e)
+        raise ConnectionError
 
 def calendar_today():
     try:
@@ -59,6 +66,10 @@ def calendar_today():
             response.append(f"{e[0]}, {e[1]}:{e[2]}")
 
     except PyiCloudAPIResponseError as e:
+        raise ConnectionError(e)
+    except NameError as e:
+        print("No se pudo iniciar sesión en iCloud")
+        print(e)
         raise ConnectionError(e)
     
     return response
@@ -84,6 +95,10 @@ def reminders_today():
                         response.append(reminder)
 
     except PyiCloudAPIResponseError as e:
+        raise ConnectionError(e)
+    except NameError as e:
+        print("No se pudo iniciar sesión en iCloud")
+        print(e)
         raise ConnectionError(e)
 
     return response

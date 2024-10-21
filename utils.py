@@ -6,7 +6,6 @@ import numpy as np
 import json
 import vosk
 from gtts import gTTS
-import requests
 import time
 import icloud
 import sys
@@ -15,7 +14,15 @@ import os
 import spotify
 from spotipy import SpotifyException
 from openai import OpenAI
-import lamp
+from datetime import datetime, timedelta
+
+RPI = True
+
+try:
+    import lamp
+except ImportError:
+    RPI = False
+    print("No se importó lampara, porque el entorno no es Raspberry PI")
 
 client = OpenAI(api_key=config.OPENAI_APIKEY)
 
@@ -29,8 +36,8 @@ KWRDS = {
     "greetings": ["buen día", "buen día " + config.NAME_AI, "muy buenos días", "buenos días"],
     "chatgpt_data": ['tengo una duda', 'ayúdame con algo', 'ayúdeme con algo', 'ayudarme con algo'],
     "chatgpt": ['inicia una conversación', 'hablémos por favor', 'inicia un chat', 'necesito respuestas', 'iniciar un chat', 'pon un chat'],
-    "lamp_on": ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor'],
-    "lamp_off": ['apaga la luz', 'quita la luz', 'apaga la luz por favor'],
+    "lamp_on": ['enciende la luz', 'prende la luz', 'luz por favor', 'enciende la luz por favor'] if RPI else [],
+    "lamp_off": ['apaga la luz', 'quita la luz', 'apaga la luz por favor'] if RPI else [],
     "daily_phrase": ['frase del día', 'frase motivadora', 'frase para hoy', "frase de hoy"],
     "weather_info": ['clima', 'temperatura'],
     "calendar_info": ['calendario', 'agenda', "organizado", "eventos"],
@@ -47,7 +54,8 @@ ai_active = False # ¿Asistente activa?
 ai_since = 0 # ¿Desde cuándo está activa?
 paused = False # ¿Música pausada para hablar?
 stopped = True # ¿Música totalmente detenida?
-alarm = False # ¿Alarma activa?
+alarm_active = False # ¿Alarma activa?
+alarm_time = int(datetime.now().timestamp()) # Hora de la alarma
 
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
@@ -83,16 +91,47 @@ def text_to_number(text:str):
         "seis": "6",
         "siete": "7",
         "ocho": "8",
-        "nueve": "9"
+        "nueve": "9",
+        "diez": "10",
+        "once": "11",
+        "doce": "12",
+        "trece": "13",
+        "catorce": "14",
+        "quince": "15",
+        "dieciséis": "16",
+        "diecisiete": "17",
+        "dieciocho": "18",
+        "diecinueve": "19",
+        "veinte": "20",
+        "veintiuno": "21",
+        "veintidós": "22",
+        "veintitrés": "23",
+        "veinticuatro": "24",
+        "veinticinco": "25",
+        "veintiséis": "26",
+        "veintisiete": "27",
+        "veintiocho": "28",
+        "veintinueve": "29",
+        "treinta": "30",
+        "cuarenta": "40",
+        "cincuenta": "50",
+        "sesenta": "60",
+        "setenta": "70",
+        "ochenta": "80",
+        "noventa": "90"
     }
     
-    words = text.split(" ")
+    try:
+        words = text.split(" ")
 
-    numbers_str = ""
+        numbers_str = ""
 
-    for w in words:
-        if w in numbers.keys():
-            numbers_str += numbers[w]
+        for w in words:
+            if w in numbers.keys():
+                numbers_str += numbers[w]
+    except Exception as e:
+        print(e)
+        raise ValueError("Error al procesar el texto, al parecer no son números")
     
 
     return numbers_str
@@ -101,7 +140,12 @@ def text_to_number(text:str):
 def initicloud():
     '''Inicia sesión en iCloud'''
     global want_validate_icloud
-    result = icloud.init_icloud()
+    try:
+        result = icloud.init_icloud()
+    except ConnectionError:
+        print("Hubo un problema con la conexión a iCloud")
+        want_validate_icloud = False
+        return
 
     if result: 
         want_validate_icloud = True
@@ -145,17 +189,20 @@ recognizer = vosk.KaldiRecognizer(model, RATE)
 def validate_icloud():
     '''Veriica si iCloud está iniciado'''
     global want_validate_icloud
+    try:
+        if not icloud.validated and want_validate_icloud:
+            speak(f"{config.NAME_USER}, icloud no está validado, ¿quieres proporcionar el acceso?")
+            response = listen()
+            time.sleep(5)
 
-    if not icloud.validated and want_validate_icloud:
-        speak(f"{config.NAME_USER}, icloud no está validado, ¿quieres proporcionar el acceso?")
-        response = listen()
-        time.sleep(5)
-
-        if response == "si":
-            initicloud()
-        else:
-            speak("Ok, avísame si quieres validar iCloud")
-            want_validate_icloud = False
+            if response == "si":
+                initicloud()
+            else:
+                speak("Ok, avísame si quieres validar iCloud")
+                want_validate_icloud = False
+    except AttributeError:
+        print("Hubo un problema con la conexión a iCloud")
+        want_validate_icloud = False
 
 def recognize(data):
     '''Reconoce el audio del usuario'''
@@ -207,7 +254,8 @@ def speak(text):
     tts.save("response.mp3")
     os.system(PLAYER + "response.mp3")
 
-    validate_icloud()
+    if want_validate_icloud:
+        validate_icloud()
     
     stream.start_stream()
     ai_since = int(time.time())
@@ -347,7 +395,7 @@ def greetings():
 
         speak("Tengo una frase motivadora para tí")
         speak(phrase)
-    except Exception as e:
+    except Exception:
         print("Hubo un error al obtener la frase motivadora")
 
     return "¡Que tengas un excelente día!"
@@ -369,7 +417,8 @@ def chatgpt():
             gpt = chatgpt_chat(prompt)
             print(gpt)
             speak(gpt)
-    except:
+    except Exception as e:
+        print(e)
         res = "Hubo un error en el chat"
 
     return res
@@ -470,13 +519,14 @@ def ai():
     return f"¿Si {config.NAME_USER}?"
 
 def alarm(request):
-    return "En desarrollo"
-    global alarm
+    global alarm_active, alarm_time
+
+    text = request
 
     response = ""
-    if alarm:
+    if alarm_active and "desactica" in request:
         response = "Alarma desactivada"
-        alarm = False
+        alarm_active = False
     else: # Si no está activa, capturar la hora, y si es AM o PM
         words_am = ["am", "a.m.", "a m", "a.m", "a.m.", "a. m.", "a. m", "a m.", "de la mañana"]
         words_pm = ["pm", "p.m.", "p m", "p.m", "p.m.", "p. m.", "p. m", "p m.", "de la tarde"]
@@ -484,23 +534,61 @@ def alarm(request):
         is_am = isin(request, words_am)
         is_pm = isin(request, words_pm)
 
-        if is_am:
+        if not is_am and not is_pm:
+            is_am = True # Por defecto, si no es AM o PM, es AM
+            word = words_am[0]
+            text = text.replace(config.NAME_AI, "")
+            text = text.strip()
+            text = text + " " + word
+        elif is_am:
             word = [w for w in words_am if w in request][0]
-            hour = int(text_to_number(request.split(word)[0].split(" ")[-1]))
+        elif is_pm:
+            word = [w for w in words_pm if w in request][0]
         
-        response = "Alarma activada"
-        alarm = True
+        text = text.replace("media", "treinta")
+        text = text.replace("un cuarto", "quince")
+        try:
+            minutes = text.split(word)[0].strip().split(" ")
+            minutes = int(text_to_number(minutes[-1]))
+        except ValueError:
+            response = "No se pudo procesar el texto"
+            return response
+        try:
+            hour = text.split(word)[0].strip().split(" ")
+            hour = int(text_to_number(hour[-2]))
+        except ValueError:
+            hour = minutes # El usuario no dio minutos, asumimos que es la hora
+            minutes = 0
+
+            if hour > 24:
+                response = "La hora " + str(hour) + " no es válida"
+                return response
+            
+        al_time = datetime.now().replace(hour=hour, minute=minutes)
+        if al_time < datetime.now():
+            al_time = al_time + timedelta(days=1)
+        alarm_time = int(al_time.timestamp())
+    
+        response = "Alarma activada para las " + str(hour) + ":" + str(minutes)
+        alarm_active = True
     return response
 
 ##########
 
-FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
+FUNCTIONS = dict(zip(KWRDS.keys(), [globals()[k] for k in KWRDS.keys()]))
 
 def manage_request(request):
+    global alarm_active, alarm_time
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
     global ai_active, ai_since, paused, stopped
 
     response = ""
+
+    if alarm_active:
+        if alarm_time < int(datetime.now().timestamp()) and alarm_time > int(datetime.now().timestamp()) - 8:
+            print("Alarma activa, música para relajarme")
+            music("música para relajarme")
+            alarm_active = False
         
     try:
         if int(time.time()) - ai_since > MAX_AI_TIME and paused and not stopped: 
@@ -525,7 +613,9 @@ def manage_request(request):
         else:
             for k in KWRDS.keys():
                 if isin(request, KWRDS[k]):
-                    if k == "music" or k == "alarm":
+                    if len(request) > len(config.NAME_AI) and k == "ai":
+                        continue
+                    elif k == "music" or k == "alarm":
                         response = FUNCTIONS[k](request)
                     else:
                         response = FUNCTIONS[k]()
