@@ -355,12 +355,14 @@ def chatgpt_chat(prompt):
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": f"Eres una asistente de mi centro de trabajo y hogar, me ayudas en mi planificación diaria y en llevar a cabo mis proyectos, tu nombre es {config.NAME_AI}, mi nombre es {config.NAME_USER}."},
-            {"role": "user", "content": prompt + ". Responde en texto plano, sin usar Markdown."}
+            {"role": "user", "content": prompt}
         ],
         temperature=0.7
     )
 
     res = response.choices[0].message.content
+    ## Remover caracteres de markdown
+    res = res.replace("*", "").replace("#", "").replace("`", "").replace("_", "")
     print(res)
     return res
 
@@ -482,11 +484,12 @@ def chatgpt_data():
             model="gpt-4o-mini",
             messages=[{
                 "role": "user",
-                "content": prompt + " usa formato de texto plano, no uses markdown"
+                "content": prompt
             }]
         )
         res = response.choices[0].message.content
-        res = res.replace("*", "")
+        # Remover caracteres de markdown
+        res = res.replace("*", "").replace("#", "").replace("`", "").replace("_", "")
     except Exception:
         res = "Hubo un error con la consulta"
     print(res)
