@@ -48,7 +48,14 @@ def shuffle(on=True, playlist_uri="", device=""):
     except Exception as e:
         raise ConnectionError(e)
 
-def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=80):
+def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=80, repeat_mode="context"):
+    '''
+    Reproduce una lista de reproducción
+    repeat_mode: context, off, context, or track
+    volume: 0-100
+    playlist_uri: ID de la lista de reproducción
+    random: True o False
+    '''
     device = get_device('Librespot')
 
     if(device):
@@ -64,6 +71,8 @@ def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=80):
             # Reproduce una playlist específica
             print("Reproduciendo playlist...")
             sp.start_playback(device_id=device, context_uri=playlist_uri)
+        
+        sp.repeat(state=repeat_mode, device_id=device)
     else:
         print("No se encontró el dispositivo")
         raise ValueError("Lo siento, no se encontró el dispositivo de reproducción")
