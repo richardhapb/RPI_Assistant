@@ -90,8 +90,17 @@ def resume():
 
 def is_playing():
     try:
-        playing = not sp.current_playback() == None
+        playing = sp.current_playback() is not None
     except ReadTimeout:
         print("Hubo un problema al acceder a la información")
         playing = False
     return playing
+
+def set_volume(volume):
+    if volume > 100:
+        raise ValueError("El volumen no puede ser mayor a 100")
+    try:
+        sp.volume(volume, get_device('Librespot'))
+        print("Volumen establecido a " + str(volume))
+    except Exception as e:
+        raise ConnectionError(e)

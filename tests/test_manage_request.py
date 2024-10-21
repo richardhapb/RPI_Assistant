@@ -1,7 +1,9 @@
 import utils
 import config
+import pytest
 
 
+@pytest.mark.skip(reason="Se reproduce música")
 def test_manage_request():
     assert utils.manage_request("buen día " + config.NAME_AI) == "¡Que tengas un excelente día!"
     assert utils.manage_request(config.NAME_AI) == "¿Si " + config.NAME_USER + "?"

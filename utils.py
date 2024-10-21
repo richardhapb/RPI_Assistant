@@ -501,6 +501,7 @@ def music(request):
             paused = False
             response = "listo"
         else:
+            spotify.set_volume(75)
             if isin(request, ["viajar"]):
                 spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
             elif isin(request, ["estudiar"]):
@@ -593,7 +594,13 @@ def manage_request(request):
     if alarm_active:
         if alarm_time < int(datetime.now().timestamp()) and alarm_time > int(datetime.now().timestamp()) - 8:
             print("Alarma activa, música para relajarme")
-            music("música para relajarme")
+            speak("Hola " + config.NAME_USER + ", despierta")
+            try:
+                spotify.set_volume(50)
+                music("música para relajarme")
+            except ConnectionError as e:
+                print(e)
+                response = "No se pudo cambiar el volumen"
             alarm_active = False
         
     try:
