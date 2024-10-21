@@ -1,4 +1,5 @@
 import utils as utils
+from datetime import datetime
 
 
 def test_text_to_number():
@@ -45,3 +46,22 @@ def test_isin():
 
 def test_weather():
     assert isinstance(utils.weather(), tuple)
+
+def test_day_to_es():
+    assert utils.day_to_es("Monday") == "lunes"
+    assert utils.day_to_es("Sunday") == "domingo"
+    assert utils.day_to_es("Tuesday, 2nd of March 2023") == "martes, 2nd of march 2023"
+
+def test_month_to_es():
+    assert utils.month_to_es("January") == "enero"
+    assert utils.month_to_es("February") == "febrero"
+    assert utils.month_to_es("3rd of March 2023") == "3rd of marzo 2023"
+
+def test_date_now():
+    now = datetime.now()
+    assert utils.date_now() == "Hoy es " + utils.month_to_es(utils.day_to_es(now.strftime("%A, %d de %B de %Y")))
+    print(utils.date_now())
+
+def test_time_now():
+    now = datetime.now()
+    assert utils.time_now() == "Son las " + now.strftime("%H y %M")

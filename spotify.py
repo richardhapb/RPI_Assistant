@@ -55,10 +55,11 @@ def shuffle(on=True, playlist_uri="", device=""):
     except Exception as e:
         raise ConnectionError(e)
 
-def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True):
+def playlist(playlist_uri=DEFAULT_PLAYLIST, random=True, volume=75):
     device = get_device('Librespot')
 
     if(device):
+        set_volume(volume, device)
         if random:
             sp.start_playback(device_id=device, context_uri=playlist_uri)
             try:
@@ -96,11 +97,12 @@ def is_playing():
         playing = False
     return playing
 
-def set_volume(volume):
+def set_volume(volume, device=None):
     if volume > 100:
         raise ValueError("El volumen no puede ser mayor a 100")
     try:
-        sp.volume(volume, get_device('Librespot'))
+        device_id = get_device('Librespot') if device is None else device
+        sp.volume(volume, device_id=device_id)
         print("Volumen establecido a " + str(volume))
     except Exception as e:
         raise ConnectionError(e)

@@ -44,7 +44,9 @@ KWRDS = {
     "icloud_is_validated": ["icloud", "cloud", "club", "clavo"],
     "music": ["música"],
     "ai": config.KWDS_AI,
-    "alarm": ["alarma", "despertar", "despertarme", "alarmas", "despertar alarma", "despertar alarmas", "despiertame"]
+    "alarm": ["alarma", "despertar", "despertarme", "alarmas", "despertar alarma", "despertar alarmas", "despiertame"],
+    "date_now": ["fecha actual", "fecha de hoy", "fecha es hoy", "fecha estamos"],
+    "time_now": ["dime la hora", "qué hora es"]
 }
 
 ## GLOBALS
@@ -141,6 +143,43 @@ def text_to_number(text:str):
     
 
     return numbers_str
+
+def day_to_es(day:str):
+    days = [("sunday", "domingo"),
+            ("monday", "lunes"),
+            ("tuesday", "martes"),
+            ("wednesday", "miércoles"),
+            ("thursday", "jueves"),
+            ("friday", "viernes"),
+            ("saturday", "sábado")]
+    
+    response = day
+    
+    for d in days:
+        response = response.lower().replace(*d)
+    
+    return response
+
+def month_to_es(date: str):
+    months = [("january", "enero"),
+            ("february", "febrero"),
+            ("march", "marzo"),
+            ("april", "abril"),
+            ("may", "mayo"),
+            ("june", "junio"),
+            ("july", "julio"),
+            ("august", "agosto"),
+            ("september", "septiembre"),
+            ("october", "octubre"),
+            ("november", "noviembre"),
+            ("december", "diciembre")]
+
+    response = date
+
+    for m in months:
+        response = response.lower().replace(*m)
+
+    return response
 
 ### ICLOUD
 def initicloud():
@@ -501,7 +540,6 @@ def music(request):
             paused = False
             response = "listo"
         else:
-            spotify.set_volume(75)
             if isin(request, ["viajar"]):
                 spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
             elif isin(request, ["estudiar"]):
@@ -580,6 +618,14 @@ def alarm(request):
         alarm_active = True
     return response
 
+def date_now():
+    now = datetime.now()
+    return "Hoy es " + month_to_es(day_to_es(now.strftime("%A, %d de %B de %Y")))
+
+def time_now():
+    now = datetime.now()
+    return "Son las " + now.strftime("%H y %M")
+
 ##########
 
 FUNCTIONS = dict(zip(KWRDS.keys(), [globals()[k] for k in KWRDS.keys()]))
@@ -594,10 +640,9 @@ def manage_request(request):
     if alarm_active:
         if alarm_time < int(datetime.now().timestamp()) and alarm_time > int(datetime.now().timestamp()) - 8:
             print("Alarma activa, música para relajarme")
-            speak("Hola " + config.NAME_USER + ", despierta")
+            speak("Hola " + config.NAME_USER + ", despierta, " + time_now())
             try:
-                spotify.set_volume(40)
-                music("música para relajarme")
+                music("música para relajarme", volume=50)
             except ConnectionError as e:
                 print(e)
                 response = "No se pudo cambiar el volumen"
