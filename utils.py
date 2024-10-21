@@ -596,7 +596,7 @@ def manage_request(request):
             print("Alarma activa, música para relajarme")
             speak("Hola " + config.NAME_USER + ", despierta")
             try:
-                spotify.set_volume(50)
+                spotify.set_volume(40)
                 music("música para relajarme")
             except ConnectionError as e:
                 print(e)
