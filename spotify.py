@@ -90,8 +90,8 @@ def resume():
 
 def is_playing():
     try:
-        playing = sp.currently_playing()
-        playing = playing["is_playing"]
+        playing = sp.current_playback()
+        playing = playing["is_playing"] and playing["device"]["name"] == DEVICE_NAME
     except ReadTimeout:
         print("Hubo un problema al acceder a la información")
         playing = False
