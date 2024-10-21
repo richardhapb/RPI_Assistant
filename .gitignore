@@ -7,4 +7,6 @@ __pycache__
 .lgd-nfy0
 *.mp3
 *.ipynb
+.pytest_cache
 
+.vscode/settings.json

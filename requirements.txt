@@ -90,3 +90,5 @@ Werkzeug==3.0.4
 wheel==0.44.0
 yarl==1.14.0
 zipp==3.20.2
+pytest==7.4.0
+pytest-lazy-fixture==0.6.3

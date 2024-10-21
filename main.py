@@ -1,5 +1,5 @@
 import config
-import utils
+import utils as utils
 import time
 
 RPI = True

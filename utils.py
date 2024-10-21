@@ -126,9 +126,15 @@ def text_to_number(text:str):
 
         numbers_str = ""
 
+        cont = False
         for w in words:
             if w in numbers.keys():
                 numbers_str += numbers[w]
+                cont = True
+            else:
+                if cont and w == "y":
+                    numbers_str = numbers_str[:-1]
+                cont = False
     except Exception as e:
         print(e)
         raise ValueError("Error al procesar el texto, al parecer no son números")
@@ -524,12 +530,12 @@ def alarm(request):
     text = request
 
     response = ""
-    if alarm_active and "desactica" in request:
+    if alarm_active and "desactiva" in request:
         response = "Alarma desactivada"
         alarm_active = False
     else: # Si no está activa, capturar la hora, y si es AM o PM
-        words_am = ["am", "a.m.", "a m", "a.m", "a.m.", "a. m.", "a. m", "a m.", "de la mañana"]
-        words_pm = ["pm", "p.m.", "p m", "p.m", "p.m.", "p. m.", "p. m", "p m.", "de la tarde"]
+        words_am = ["am", "a.m.", "de la mañana"]
+        words_pm = ["pm", "p.m.", "de la tarde"]
 
         is_am = isin(request, words_am)
         is_pm = isin(request, words_pm)
@@ -545,8 +551,9 @@ def alarm(request):
         elif is_pm:
             word = [w for w in words_pm if w in request][0]
         
-        text = text.replace("media", "treinta")
+        text = text.replace("y media", "treinta")
         text = text.replace("un cuarto", "quince")
+        text = text.replace("y cuarto", "quince")
         try:
             minutes = text.split(word)[0].strip().split(" ")
             minutes = int(text_to_number(minutes[-1]))
