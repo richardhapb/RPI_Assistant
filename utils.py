@@ -36,7 +36,8 @@ KWRDS = {
     "calendar_info": ['calendario', 'agenda', "organizado", "eventos"],
     "icloud_is_validated": ["icloud", "cloud", "club", "clavo"],
     "music": ["música"],
-    "ai": config.KWDS_AI
+    "ai": config.KWDS_AI,
+    "alarm": ["alarma", "despertar", "despertarme", "alarmas", "despertar alarma", "despertar alarmas", "despiertame"]
 }
 
 ## GLOBALS
@@ -46,6 +47,7 @@ ai_active = False # ¿Asistente activa?
 ai_since = 0 # ¿Desde cuándo está activa?
 paused = False # ¿Música pausada para hablar?
 stopped = True # ¿Música totalmente detenida?
+alarm = False # ¿Alarma activa?
 
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
@@ -467,6 +469,29 @@ def music(request):
 def ai():
     return f"¿Si {config.NAME_USER}?"
 
+def alarm(request):
+    return "En desarrollo"
+    global alarm
+
+    response = ""
+    if alarm:
+        response = "Alarma desactivada"
+        alarm = False
+    else: # Si no está activa, capturar la hora, y si es AM o PM
+        words_am = ["am", "a.m.", "a m", "a.m", "a.m.", "a. m.", "a. m", "a m.", "de la mañana"]
+        words_pm = ["pm", "p.m.", "p m", "p.m", "p.m.", "p. m.", "p. m", "p m.", "de la tarde"]
+
+        is_am = isin(request, words_am)
+        is_pm = isin(request, words_pm)
+
+        if is_am:
+            word = [w for w in words_am if w in request][0]
+            hour = int(text_to_number(request.split(word)[0].split(" ")[-1]))
+        
+        response = "Alarma activada"
+        alarm = True
+    return response
+
 ##########
 
 FUNCTIONS = dict(zip(KWRDS.keys(), [locals()[k] for k in KWRDS.keys()]))
@@ -500,7 +525,7 @@ def manage_request(request):
         else:
             for k in KWRDS.keys():
                 if isin(request, KWRDS[k]):
-                    if k == "music":
+                    if k == "music" or k == "alarm":
                         response = FUNCTIONS[k](request)
                     else:
                         response = FUNCTIONS[k]()
