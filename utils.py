@@ -533,7 +533,7 @@ def music(request):
             spotify.pause()
             stopped = True
             paused = False
-            response = "listo"
+            response = "Música pausada"
         elif isin(request, ["reanuda", "continúa", "play"]):
             spotify.resume()
             stopped = False
@@ -631,9 +631,8 @@ def time_now():
 FUNCTIONS = dict(zip(KWRDS.keys(), [globals()[k] for k in KWRDS.keys()]))
 
 def manage_request(request):
-    global alarm_active, alarm_time
     '''Ciclo principal donde se controla el flujo según orden de usuario'''
-    global ai_active, ai_since, paused, stopped
+    global ai_active, ai_since, paused, stopped, alarm_active, alarm_time
 
     response = ""
 
