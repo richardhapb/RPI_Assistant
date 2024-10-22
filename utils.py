@@ -15,6 +15,7 @@ import spotify
 from spotipy import SpotifyException
 from openai import OpenAI
 from datetime import datetime, timedelta
+import platform
 
 RPI = True
 
@@ -61,7 +62,7 @@ alarm_time = int(datetime.now().timestamp()) # Hora de la alarma
 
 RATE = 16000 # Ratio de captación pyaudio
 CHUNK = 1024  # Tamaño del fragmento de audio (puede ser 1024, 2048, 4000, etc.)
-PLAYER = "cvlc --play-and-exit "
+PLAYER = "cvlc --play-and-exit " if platform.system() == "Linux" else "mpg123 -q "
 MAX_AI_TIME = 10 # Tiempo que asistente está activa en segundos
 
 # Inicialización de PyAudio y apertura del flujo de entrada/salida
@@ -527,7 +528,7 @@ def icloud_is_validated():
     validate_icloud()
     return ""
 
-def music(request):
+def music(request, volume=80):
     global paused, stopped
     response = ""
     try:
@@ -543,13 +544,13 @@ def music(request):
             response = "listo"
         else:
             if isin(request, ["viajar"]):
-                spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p")
+                spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p", volume=volume)
             elif isin(request, ["estudiar", "leer"]):
-                spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p", volume=70)
+                spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p", volume=volume-10)
             elif isin(request, ["relajarme", "tranquila"]):
-                spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO")
+                spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO", volume=volume)
             else:
-                spotify.playlist()
+                spotify.playlist(volume=volume)
             stopped = False
             paused = False
     except SpotifyException:
