@@ -27,10 +27,10 @@ def get_device(device:str):
     return device_id
 
 def shuffle(on=True, playlist_uri="", device=""):
-    # Reproducción aleatoria
-    sp.shuffle(state=on)
 
     try:
+        # Reproducción aleatoria
+        sp.shuffle(state=on, device_id=device)
         # Obtener todas las canciones de la lista de reproducción
 
         if playlist_uri:
