@@ -26,11 +26,10 @@ def get_device(device:str):
             break
     return device_id
 
-def shuffle(on=True, playlist_uri="", device=""):
+def shuffle(on=True, playlist_uri="", device=None):
 
     try:
         # Reproducción aleatoria
-        sp.shuffle(state=on, device_id=device)
         # Obtener todas las canciones de la lista de reproducción
 
         if playlist_uri:
@@ -45,6 +44,8 @@ def shuffle(on=True, playlist_uri="", device=""):
                 sp.start_playback(uris=track_uris, device_id=device)
             else:
                 sp.start_playback(uris=track_uris)
+                
+            sp.shuffle(state=on, device_id=device)
     except Exception as e:
         raise ConnectionError(e)
 
