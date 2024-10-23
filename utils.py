@@ -546,7 +546,7 @@ def music(request, volume=80):
             if isin(request, ["viajar"]):
                 spotify.playlist("spotify:playlist:47RDqYFo357tW5sIk5cN8p", volume=volume)
             elif isin(request, ["estudiar", "leer"]):
-                spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p", volume=volume-10)
+                spotify.playlist("spotify:playlist:1YIe34rcmLjCYpY9wJoM2p", volume=volume-20)
             elif isin(request, ["relajarme", "tranquila"]):
                 spotify.playlist("spotify:playlist:0qPA1tBtiCLVHCUfREECnO", volume=volume)
             else:
